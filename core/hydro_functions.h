@@ -59,8 +59,8 @@ namespace shyft::core {
          * \param rhumidity, [percent] -- relative humidity
          * \return e, [kPa] -- actual vapor pressure*/
 		inline double actual_vp(double temperature, double rhumidity){
-			double es = (temperature>=0.0) ? (6108 * exp(17.27*temperature/(temperature + 237.3))) : 6108*exp(21.87*temperature/(temperature+265.5)) ; // saturation vapor pressure,[kPa], eq.(3.9)
-			return rhumidity/100.0*es*Pa2kPa;//[kPa], based on eq.(3.12)
+			double es = (temperature>=0.0) ? (0.6108 * exp(17.27*temperature/(temperature + 237.3))) : 0.6108*exp(21.87*temperature/(temperature+265.5)) ; // saturation vapor pressure,[kPa], eq.(3.9)
+			return rhumidity/100.0*es;//[kPa], based on eq.(3.12)
 		}
 
 		// the whole section is based on supplementary materials of
@@ -84,9 +84,9 @@ namespace shyft::core {
 			return 4098*(0.6108*exp(17.27*air_temp/(237.3+air_temp)))/(air_temp+237.3)/(air_temp+237.3);
 		}
 		/**\brief saturation vapor pressure at temperature  Allen et al., 1998, Equation 11*/
-		inline double svp(double temp){
-			return 0.6108*exp(17.27*temp/(temp+237.3));
-		}
+		inline double svp(double temperature){
+			return (temperature>=0.0) ? (0.6108 * exp(17.27*temperature/(temperature + 237.3))) : 0.6108*exp(21.87*temperature/(temperature+265.5));
+        }
 		/**\brief daily saturation vapor pressure  Allen et al., 1998, Equation 12*/
 		inline double svp_daily(double tmax, double tmin) {
 			return 0.5*(svp(tmax)+svp(tmin));

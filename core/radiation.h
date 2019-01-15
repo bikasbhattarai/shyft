@@ -80,6 +80,49 @@ namespace shyft {
 
                 }
 
+                /**\brief net radiation asce-ewri*/
+                void net_radiation_asce_ewri(R &response, double latitude, utctime t, double slope=0.0, double aspect = 0.0,
+                                             double temperature = 0.0, double rhumidity = 40.0, double elevation = 0.0,
+                                             double rsm = 0.0){
+
+
+                    double phi = latitude;
+                    double longz = 105.0;
+                    double longitudem = 104.78;
+                    double doy = utc.day_of_year(t);
+                    double delta = 0.409*sin(2*pi/365*doy-1.39);
+                    double oms = acos(-tan(phi)*tan(delta));
+                    double b = 2*pi/364*(doy - 81);
+                    double t1 = 1;
+                    double Sc = 0.1645*sin(2*b) - 0.1255*cos(b) - 0.025*sin(b);
+                    double hour = utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0;
+                    double om = pi/12.0*((hour+0.06667*(longz-longitudem)+Sc)-12.0);
+                    double om1 = om - pi*t1/24;
+                    double om2 = om + pi*t1/24;
+                    double Gsc = 4.92;
+                    double dr = 1+0.033*cos(2*pi/365*doy);
+                    if (om1 < -oms)
+                        om1 = -oms;
+                    if (om2 <-oms)
+                        om2 = -oms;
+                    if (om1>oms)
+                        om1 = oms;
+                    if (om2>oms)
+                        om2  = oms;
+                    if (om1>om2)
+                        om1 = om2;
+
+                    double ra = 12.0/pi*Gsc*dr*(om2-om1*sin(phi)*sin(delta)+cos(phi)*cos(delta)*(sin(om2)-sin(om1)));
+                    if  ((om<-oms) or (om>oms))
+                        ra = 0.0;
+                    double rso = (0.75+0.00002*elevation)*ra;
+                    double avp = actual_vp(temperature,rhumidity);
+                    double fcd = max(0.05,min(1.0,1.35*max(0.3,min(1.0,rsm/rso))-0.35)); // eq.45
+                    response.sw_radiation = rsm*(1 - param.albedo);
+                    response.lw_radiation = 2.042*0.0000000001*fcd*(0.34-0.14*sqrt(avp))*pow(temperature+273.16,4);
+                    response.net_radiation = response.sw_radiation-response.lw_radiation;
+                }
+
 
             private:
                 double delta_;
