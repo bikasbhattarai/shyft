@@ -128,9 +128,12 @@ namespace shyft::core::radiation_model{
                 utctime t = time_axis.time(i);
                 double temp = temp_accessor.value(i);
                 double rel_hum = rel_hum_accessor.value(i);
-
+                std::cout<<"temp: " <<temp<<std::endl;
+                std::cout<<"rh: "<<rel_hum<<std::endl;
                 sw_radiation.net_radiation(response.rad, geo_cell_data.mid_point().x, t, 0.0, 0.0, temp, rel_hum, geo_cell_data.mid_point().z);//
-
+                std::cout<<"sw radiation:" <<response.rad.sw_radiation<<std::endl;
+                std::cout<<"lw radiation:" <<response.rad.lw_radiation<<std::endl;
+                std::cout<<"net radiation:" <<response.rad.net_radiation<<std::endl;
                 //std::cout<<response.rad.psw_radiation<<"  ===== "<<std::endl;
 
 

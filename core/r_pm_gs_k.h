@@ -375,6 +375,7 @@ namespace shyft {
             // Step through times in axis
             size_t i_begin = n_steps > 0 ? start_step : 0;
             size_t i_end = n_steps > 0 ? start_step + n_steps : time_axis.size();
+            std::cout<<i_end<<std::endl;
             for (size_t i = i_begin ; i < i_end ; ++i) {
                 utcperiod period = time_axis.period(i);
                 utctime t = time_axis.time(i);
@@ -383,13 +384,23 @@ namespace shyft {
                 double rel_hum = rel_hum_accessor.value(i);
                 double prec = p_corr.calc(prec_accessor.value(i));
                 double ws = wind_speed_accessor.value(i);
+                std::cout<<"temp: " <<temp<<std::endl;
+                std::cout<<"rh: "<<rel_hum<<std::endl;
+                std::cout<<"rad: "<<rad<<std::endl;
                 state_collector.collect(i, state.scale_snow(snow_storage_fraction));///< \note collect the state at the beginning of each period (the end state is saved anyway)
 
                 gs.step(state.gs, response.gs, period.start, period.timespan(), parameter.gs,
                         temp, rad, prec, wind_speed_accessor.value(i), rel_hum,forest_fraction,altitude);
                 response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf, temp, cell_area_m2*response.gs.sca, glacier_area_m2);
-                radc.net_radiation(response.rad, geo_cell_data.mid_point().x, t, 0.0, 0.0, temp, rel_hum, altitude);// radiation model
-                pm.reference_evapotranspiration_asce(response.pm, response.rad.net_radiation,temp,rel_hum,altitude,2.0,ws, 2.0); // TODO: move height of measurements into parameters
+//                radc.net_radiation(response.rad, geo_cell_data.mid_point().x, t, 0.0, 0.0, temp, rel_hum, altitude);// radiation model
+//                radc.net_radiation(response.rad, 40.4, t, 0.0, 0.0, temp, rel_hum, altitude, rad/0.0864);// radiation model TODO: check translation, it doesn't work now
+                radc.net_radiation(response.rad, 40.4, t, 0.0, 0.0, temp, rel_hum, altitude);// radiation model
+                std::cout<<"sw radiation:" <<response.rad.sw_radiation<<std::endl;
+                std::cout<<"lw radiation:" <<response.rad.lw_radiation<<std::endl;
+                std::cout<<"net radiation:" <<response.rad.net_radiation<<std::endl;
+                pm.reference_evapotranspiration_asce(response.pm, response.rad.net_radiation*0.0036,temp,rel_hum,altitude,2.0,ws, 2.0); // TODO: move height of measurements into parameters
+                std::cout<<"et_ref: "<<response.pm.et_ref<<std::endl;
+                std::cout<<"----------------------------------------"<<std::endl;
                 //response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*to_seconds(calendar::HOUR); //mm/s -> mm/h
                 response.ae.ae = actual_evapotranspiration::calculate_step(
                                   state.kirchner.q,
