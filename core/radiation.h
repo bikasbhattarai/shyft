@@ -118,8 +118,9 @@ namespace shyft {
                     double rso = (0.75+0.00002*elevation)*ra;
                     double avp = actual_vp(temperature,rhumidity);
                     double fcd = max(0.05,min(1.0,1.35*max(0.3,min(1.0,rsm/rso))-0.35)); // eq.45
-                    response.sw_radiation = rsm*(1 - param.albedo);
-                    response.lw_radiation = 2.042*0.0000000001*fcd*(0.34-0.14*sqrt(avp))*pow(temperature+273.16,4);
+//                    response.sw_radiation = rsm*(1 - param.albedo);
+                    response.sw_radiation = psw_radiation(latitude,t,slope,aspect,temperature,rhumidity,elevation)*0.0036;
+                    response.lw_radiation = 2.042*pow(10,-10)*fcd*(0.34-0.14*sqrt(avp))*pow(temperature+273.16,4);
                     response.net_radiation = response.sw_radiation-response.lw_radiation;
                 }
 
@@ -458,15 +459,15 @@ namespace shyft {
                 }
                 /**\brief clear-sky longwave raditiation
                  * ref.: Lawrence Dingman Physical Hydrology, Third Edition, 2015, p.261
-                 * \param temperature, [K] -- air temperature
+                 * \param temperature, [degC] -- air temperature
                  * \param rhumidity, [persent] -- relative humidity
                  * \param ss_temp, [K] -- surface temperature
                  * response.lw_radiation W/m^2 */
                 /// TODO https://www.hydrol-earth-syst-sci.net/17/1331/2013/hess-17-1331-2013-supplement.pdf
                 // TODO discuss the option to have different formulations here.
                 double lw_radiation(double temperature, double rhumidity){
-                    double Lin = 2.7*actual_vp(temperature,rhumidity)+0.245*temperature-45.14;
-                    double ss_temp = min(temperature-2.5,273.16);
+                    double Lin = 2.7*actual_vp(temperature,rhumidity)+0.245*(temperature+273.15)-45.14;
+                    double ss_temp = min(temperature+273.15-2.5,273.16);
                     double epsilon_ss = 0.95;//water TODO: as parameter
                     double Lout = epsilon_ss*sigma*pow(ss_temp,4)+(1-epsilon_ss)*Lin;
                     return (Lin-Lout)*MJm2d2Wm2;

@@ -47,7 +47,7 @@ namespace shyft::core::radiation_model{
             typedef radiation::parameter rad_parameter_t;
 
 
-            parameter(const rad_parameter_t& rad18
+            parameter(const rad_parameter_t& rad
             )
                     : rad(rad) { /*Do nothing */}
 
@@ -61,7 +61,7 @@ namespace shyft::core::radiation_model{
 
 
             ///<calibration support, needs vector interface to params, size is the total count
-            size_t size() const { return 22; }
+            size_t size() const { return 3; }
             ///<calibration support, need to set values from ordered vector
             void set(const vector<double>& p) {
                 if (p.size() != size())

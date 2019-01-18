@@ -32,6 +32,28 @@ namespace shyfttest {
 
 	namespace mock {
 
+        struct RPMGSKResponseCollector {
+            std::vector<shyft::time_series::point> evap;
+            std::vector<shyft::time_series::point> snow_storage;
+            std::vector<shyft::time_series::point> avg_discharge;
+
+            RPMGSKResponseCollector(size_t n_pts) {
+                evap.reserve(n_pts);
+                snow_storage.reserve(n_pts);
+                avg_discharge.reserve(n_pts);
+            }
+
+            template<class R>
+            void collect(size_t ix, const R& response) {
+                auto t= shyft::core::utctime(shyft::core::seconds(ix));
+                evap.emplace_back(t, response.pm.et_ref);
+                snow_storage.emplace_back(t, response.gs.storage);
+                avg_discharge.emplace_back(t, response.kirchner.q_avg);
+            }
+
+            template<class R>
+            void set_end_response(const R& r) {}
+        };
 
 		struct PTGSKResponseCollector {
 			std::vector<shyft::time_series::point> evap;
