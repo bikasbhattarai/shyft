@@ -36,6 +36,13 @@ class WXRepository(GeoTsRepository):
             Flags whether shift of years is allowed
         cache_data: bool
             Use cache data if True
+
+
+        NetCDF4 dataset assumptions depends on boolean value of 'flattened':
+            flattened = False:
+                see requirements of MetNetcdfDataRepository
+            flattened = True:
+                see requirements of ConcatDataRepository with the additional restriction that time-dimension size is 1
         """
         self.allow_year_shift = allow_year_shift
         self.cache_data = cache_data
@@ -128,10 +135,9 @@ class WXParallelizationRepository(GeoTsRepository):
 
     def __init__(self, epsg, filename, truth_file=None, padding=15000., cache_data=True, numb_years=None):
         """
-        Reads weather scenario from file. Get_timeseire_ensemble and get_forecast_ensemble returns
-        ensemble of weather scenarios using parallelization.
+        Reads weather scenario from flattened netcdf-file(s) of geo-located weather data.
 
-        TODO: describe requirements for netcfdf-file
+        Get_timeseries_ensemble and get_forecast_ensemble returns ensemble of weather scenarios using parallelization.
 
         Parameters
         ----------
@@ -147,6 +153,34 @@ class WXParallelizationRepository(GeoTsRepository):
             Use cache data if True
         numb_years: int
             Limits number of years to return. If None return as many as possible.
+
+
+        NetCDF4 dataset assumptions:
+            * Dimensions:
+                * time (unlimited)
+                * lead_time
+                * ensemble_member (optional) - only first ensemble member is used
+                * grid_point
+            * Variables:
+                * time:(float) array with periodic forecast creation timestamps in seconds since (1970.01.01 00:00, UTC)
+                * lead_time:(float) array with hours since creation time
+                * x: (float) array of latitudes of dims (grid_point)
+                * y: (float) array of longitudes of dims (grid_point)
+                * z: (float) array of altitudes [m] of dims (grid_point)
+                * forecast_is_complete: flag array of dims (time)
+                * crs: has attribute proj4, a string describing the coordinate system
+            * Optional variables:
+                * dew_point_temperature_2m: [K],
+                * surface_air_pressure: [Pa],
+                * relative_humidity_2m: [1],
+                * air_temperature_2m: [K],
+                * precipitation_amount: [kg/m^2],
+                * precipitation_amount_acc: [kg/m^2],
+                * x_wind_10m: [m/s],
+                * y_wind_10m: [m/s],
+                * windspeed_10m: [m/s],
+                * integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time: [W s/m^2]}
+                * All optional variables are (float) array with dims (time, lead_time, [ensemble_member], grid_point)
         """
         self.cache_data = cache_data
         self.cache = None
