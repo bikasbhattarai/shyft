@@ -10,7 +10,6 @@ from shapely.prepared import prep
 from functools import partial
 from shapely.geometry import MultiPoint, Polygon, MultiPolygon
 from shyft import api
-import datetime
 
 UTC = api.Calendar()
 
@@ -571,9 +570,9 @@ def parallelize_geo_timeseries(geo_ts_dict, utc_period, numb_years=None):
         vectors of geo located time series over the same time axis
     """
     ta_orig = geo_ts_dict[list(geo_ts_dict.keys())[0]][0].ts.time_axis
-    first_year_in_ts = datetime.datetime.utcfromtimestamp(ta_orig.time_points[0]).year
-    last_year_in_ts = datetime.datetime.utcfromtimestamp(ta_orig.time_points[-1]).year
-    utc_period_start_date = datetime.datetime.utcfromtimestamp(utc_period.start)
+    first_year_in_ts = UTC.calendar_units(ta_orig.total_period().start).year
+    last_year_in_ts = UTC.calendar_units(ta_orig.total_period().end).year
+    utc_period_start_date = UTC.calendar_units(utc_period.start)
     dt = int(ta_orig.time_points[1] - ta_orig.time_points[0])
     n = utc_period.diff_units(UTC, dt) + 1 
     ensemble = []
