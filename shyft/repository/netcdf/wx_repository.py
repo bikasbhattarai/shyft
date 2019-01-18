@@ -157,7 +157,7 @@ class WXParallelizationRepository(GeoTsRepository):
 
         NetCDF4 dataset assumptions:
             * Dimensions:
-                * time (unlimited)
+                * time (size = 1)
                 * lead_time
                 * ensemble_member (optional) - only first ensemble member is used
                 * grid_point
