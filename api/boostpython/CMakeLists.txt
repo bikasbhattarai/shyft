@@ -46,6 +46,7 @@
         api_hbv_tank.cpp                                api_utctime.cpp
         api_interpolation.cpp                           api_vectors.cpp
             api_radiation.cpp                           api_penman_monteith.cpp
+            api_r_pm_gs_k.cpp
      )
 
     add_library(${core_api} SHARED ${core_api_sources} )
@@ -59,7 +60,7 @@
 #
 # define each shyft method-stack that exposes complete stacks
 #
-    foreach(shyft_stack  "pt_gs_k" "pt_ss_k" "pt_hs_k" "hbv_stack" "pt_hps_k")
+    foreach(shyft_stack  "r_pm_gs_k" "pt_gs_k" "pt_ss_k" "pt_hs_k" "hbv_stack" "pt_hps_k")
         add_library(${shyft_stack} SHARED  ${shyft_stack}.cpp)
         target_include_directories(${shyft_stack} PRIVATE  ${include_python} ${include_numpy} )
         set_target_properties(${shyft_stack} PROPERTIES OUTPUT_NAME ${shyft_stack})

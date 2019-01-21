@@ -5,6 +5,7 @@ import functools
 
 from shyft.api._api import *
 
+from shyft.api import r_pm_gs_k
 from shyft.api import pt_gs_k
 from shyft.api import pt_hps_k
 from shyft.api import pt_hs_k

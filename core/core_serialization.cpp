@@ -31,6 +31,7 @@ See file COPYING for more details **/
 #include "skaugen.h"
 #include "hbv_stack.h"
 #include "pt_gs_k.h"
+#include "r_pm_gs_k.h"
 #include "pt_ss_k.h"
 #include "pt_hs_k.h"
 #include "pt_hps_k.h"
@@ -294,6 +295,13 @@ void shyft::core::pt_gs_k::state::serialize(Archive & ar, const unsigned int fil
         ;
 }
 template <class Archive>
+void shyft::core::r_pm_gs_k::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+    & core_nvp("gs",gs)
+    & core_nvp("kirchner",kirchner)
+            ;
+}
+template <class Archive>
 void shyft::core::pt_ss_k::state::serialize(Archive & ar, const unsigned int file_version) {
     ar
         & core_nvp("snow",snow)
@@ -350,6 +358,7 @@ x_serialize_implement(shyft::core::skaugen::state);
 x_serialize_implement(shyft::core::kirchner::state);
 
 x_serialize_implement(shyft::core::pt_gs_k::state);
+x_serialize_implement(shyft::core::r_pm_gs_k::state);
 x_serialize_implement(shyft::core::pt_hs_k::state);
 x_serialize_implement(shyft::core::pt_hps_k::state);
 x_serialize_implement(shyft::core::pt_ss_k::state);
@@ -402,6 +411,7 @@ x_arch(shyft::core::skaugen::state);
 x_arch(shyft::core::kirchner::state);
 
 x_arch(shyft::core::pt_gs_k::state);
+x_arch(shyft::core::r_pm_gs_k::state);
 x_arch(shyft::core::pt_hs_k::state);
 x_arch(shyft::core::pt_hps_k::state);
 x_arch(shyft::core::pt_ss_k::state);

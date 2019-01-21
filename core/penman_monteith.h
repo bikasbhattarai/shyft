@@ -143,7 +143,7 @@ namespace shyft::core{
 //                     std::cout<<"nominator: "<<nominator<<std::endl;
                     double denominator = delta + gamma*(1+Cd*ws_adjustment(param.height_ws,windspeed));
 //                     std::cout<<"denominator: "<<denominator<<std::endl;
-                    response.et_ref = max(0.01,nominator/denominator);
+                    response.et_ref = std::max(0.01,nominator/denominator);
                     return;
                 };
 
@@ -183,7 +183,7 @@ namespace shyft::core{
                  * \param ws -- wind speed at height hws, [m/s]
                  * \param ht [m] -- height of humidity and or temperature measurements*/
                 double resistance_aerodynamic(double hws, double ws, double ht=2.0){
-                    return log((hws - d)/zom)*log((ht-d)/zoh)/kappa/kappa/min(ws,0.01);
+                    return log((hws - d)/zom)*log((ht-d)/zoh)/kappa/kappa/std::min(ws,0.01);
                 }
 
                 /**\brief active leaf-area index (LAI), eq.B.4

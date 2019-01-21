@@ -26,6 +26,7 @@ See file COPYING for more details **/
 #include "core/inverse_distance.h"
 
 #include "core/pt_gs_k_cell_model.h"
+#include "core/r_pm_gs_k_cell_model.h"
 #include "core/pt_hs_k_cell_model.h"
 #include "core/pt_ss_k_cell_model.h"
 #include "core/pt_hps_k_cell_model.h"
@@ -1467,6 +1468,27 @@ namespace shyft {
 		}
 	};
 
+	  template <typename cell>
+	  struct penman_monteith_cell_response_statistics {
+		  shared_ptr<vector<cell>> cells;
+		  explicit penman_monteith_cell_response_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
+
+		  apoint_ts output(const cids_t& indexes, stat_scope ix_type) const {
+			  return apoint_ts(*cell_statistics::
+			  average_catchment_feature(*cells, indexes,
+										[](const cell& c) { return c.rc.pe_output; },ix_type));
+		  }
+		  vector<double> output(const cids_t& indexes, size_t ith_timestep, stat_scope ix_type) const {
+			  return cell_statistics::
+			  catchment_feature(*cells, indexes,
+								[](const cell& c) { return c.rc.pe_output; }, ith_timestep,ix_type);
+		  }
+		  double output_value(const cids_t& indexes, size_t ith_timestep, stat_scope ix_type) const {
+			  return cell_statistics::
+			  average_catchment_feature_value(*cells, indexes,
+											  [](const cell& c) { return c.rc.pe_output; }, ith_timestep,ix_type);
+		  }
+	  };
 
 	template <typename cell>
 	struct hbv_soil_cell_response_statistics {

@@ -119,7 +119,7 @@ namespace shyft {
                         ra = 0.0;
                     double rso = (0.75+0.00002*elevation)*ra;
                     double avp = actual_vp(temperature,rhumidity);
-                    double fcd = max(0.05,min(1.0,1.35*max(0.3,min(1.0,rsm/rso))-0.35)); // eq.45
+                    double fcd = std::max(0.05,std::min(1.0,1.35*std::max(0.3,std::min(1.0,rsm/rso))-0.35)); // eq.45
 //                    response.sw_radiation = rsm*(1 - param.albedo);
                     response.sw_radiation = psw_radiation(latitude,t,slope,aspect,temperature,rhumidity,elevation)*0.0036;
                     response.lw_radiation = 2.042*pow(10,-10)*fcd*(0.34-0.14*sqrt(avp))*pow(temperature+273.16,4);
@@ -189,7 +189,7 @@ namespace shyft {
 
                     double bbcc = b_ * b_ + c_ * c_ > 0.0 ? b_ * b_ + c_ * c_ : b_ * b_ + c_ * c_ + 0.0001;
                     double sqrt_bca = bbcc - a_ * a_ > 0.0 ? bbcc - a_ * a_ : 0.0; // the authors suggest here 0.0001???
-                    double sin_omega1 = min(1.0, max(-1.0, (a_ * c_ - b_ * pow(sqrt_bca, 0.5)) / bbcc));//eq.(13a)
+                    double sin_omega1 = std::min(1.0, std::max(-1.0, (a_ * c_ - b_ * std::pow(sqrt_bca, 0.5)) / bbcc));//eq.(13a)
                     double omega1 = asin(sin_omega1);
                     omega1_24_ = omega1;
 //                    std::cout<<omega1_24_<<std::endl;
@@ -216,7 +216,7 @@ namespace shyft {
                         }
                     }
                     if (omega1_24_ < -omega_s) { omega1_24_ = -omega_s; }
-                    double sin_omega2 = min(1.0, max(-1.0, (a_ * c_ + b_ * pow(sqrt_bca, 0.5)) / bbcc));//eq.(13b)
+                    double sin_omega2 = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));//eq.(13b)
                     double omega2 = asin(sin_omega2);
                     omega2_24_ = omega2;
                     double costt_omega2 = costt(omega2);
@@ -234,12 +234,12 @@ namespace shyft {
 //
                     // two periods of direct beam radiation (eq.7)
                     if (sin(slope) > sin(phi) * cos(delta) + cos(phi) * sin(delta)) {
-                        double sinA = min(1.0, max(-1.0, (a_ * c_ + b_ * pow(sqrt_bca, 0.5)) / bbcc));
+                        double sinA = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
                         double A = asin(sinA);
-                        double sinB = min(1.0, max(-1.0, (a_ * c_ + b_ * pow(sqrt_bca, 0.5)) / bbcc));
-                        double B = asin(sinB);
-                        omega2_24b_ = min(A, B);
-                        omega1_24b_ = max(A, B);
+                        double sinB = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
+                        double B = std::asin(sinB);
+                        omega2_24b_ = std::min(A, B);
+                        omega1_24b_ = std::max(A, B);
                         compute_abc(delta_, phi_, slope_, aspect_);
                         double costt_omega2_24b = costt(omega2_24b_);
                         if (costt_omega2_24b < -0.001 or costt_omega2_24b > 0.001) { omega2_24b_ = -pi - omega2_24b_; }
@@ -363,9 +363,9 @@ namespace shyft {
 //                    std::cout<<"omega1_24_ "<<omega1_24_<<std::endl;
 //                    std::cout<<"omega2_24_ "<<omega2_24_<<std::endl;
                     if (omega_ > omega1_24_ and omega_ < omega2_24_) {
-                        rahor_ = max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
+                        rahor_ = std::max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
                         //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
-                        ra_ = max(0.0, compute_ra(costt_, doy_)); // eq.(1)
+                        ra_ = std::max(0.0, compute_ra(costt_, doy_)); // eq.(1)
                     } else {
                         ra_ = 0.0;
                         rahor_ = 0.0;
@@ -386,9 +386,9 @@ namespace shyft {
                     sin_beta = abs(costt_);
                     // clearness index for direct beam radiation
 
-                    Kbo = min(1.0, max(-0.4, 0.98 * exp(-0.00146 * eatm_ / param.turbidity / sin_beta -
+                    Kbo = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm_ / param.turbidity / sin_beta -
                                                         0.075 * pow((W / sin_beta), 0.4)))); // eq.(17)
-                    double Kbohor = min(1.0, max(-0.4, 0.98 * exp(-0.00146 * eatm_ / param.turbidity / sin_betahor -
+                    double Kbohor = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm_ / param.turbidity / sin_betahor -
                                                                   0.075 * pow((W / sin_betahor), 0.4)))); // eq.(17)
 
                     double Kdo; // transmissivity of diffuse radiation, eq.(19)a,b,c
@@ -404,7 +404,7 @@ namespace shyft {
                     double fi_ = fi();//eq.(32)
 
                     // fb_ = min(5.0,Kbo/Kbohor*ra_/(rahor_>0.0?rahor_:max(0.00001,ra_)));//eq.(34)
-                    fb_ = ra_ / (rahor_ > 0.0 ? rahor_ : max(0.00001, ra_));//eq.(34)
+                    fb_ = ra_ / (rahor_ > 0.0 ? rahor_ : std::max(0.00001, ra_));//eq.(34)
 
                     double fia_ = fia(Kbohor, Kdohor); //eq.(33)
 
@@ -469,7 +469,7 @@ namespace shyft {
                 // TODO discuss the option to have different formulations here.
                 double lw_radiation(double temperature, double rhumidity){
                     double Lin = 2.7*actual_vp(temperature,rhumidity)+0.245*(temperature+273.15)-45.14;
-                    double ss_temp = min(temperature+273.15-2.5,273.16);
+                    double ss_temp = std::min(temperature+273.15-2.5,273.16);
                     double epsilon_ss = 0.95;//water TODO: as parameter
                     double Lout = epsilon_ss*sigma*pow(ss_temp,4)+(1-epsilon_ss)*Lin;
                     return (Lin-Lout)*MJm2d2Wm2;

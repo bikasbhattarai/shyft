@@ -73,6 +73,22 @@ namespace expose {
         }
 
         template <class cell>
+        static void penman_monteith(const char *cell_name) {
+            char response_name[200];sprintf(response_name,"%sPenmanMonteithResponseStatistics",cell_name);
+            typedef typename shyft::api::penman_monteith_cell_response_statistics<cell> rc_stat;
+
+            rts_ (rc_stat::*output_ts)(cids_, stat_scope) const = &rc_stat::output;
+            vd_  (rc_stat::*output_vd)(cids_, ix_, stat_scope) const =&rc_stat::output;
+            class_<rc_stat>(response_name,"PenmanMonteith response statistics",no_init)
+                    .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct PenmanMonteith cell response statistics object"))
+                    .def("output",output_ts,(py::arg("self"),py::arg("indexes"),py::arg("ix_type")=stat_scope::catchment_ix), "returns sum  for catcment_ids")
+                    .def("output",output_vd,(py::arg("self"),py::arg("indexes"),py::arg("i"),py::arg("ix_type")=stat_scope::catchment_ix),"returns  for cells matching catchments_ids at the i'th timestep")
+                    .def("output_value", &rc_stat::output_value, (py::arg("self"),py::arg("indexes"),py::arg("i"),py::arg("ix_type")=stat_scope::catchment_ix), "returns for cells matching catchments_ids at the i'th timestep")
+                    ;
+        }
+
+
+        template <class cell>
         static void actual_evapotranspiration(const char *cell_name) {
             char response_name[200];sprintf(response_name,"%sActualEvapotranspirationResponseStatistics",cell_name);
             typedef typename shyft::api::actual_evapotranspiration_cell_response_statistics<cell> rc_stat;

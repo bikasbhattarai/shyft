@@ -1,7 +1,7 @@
 #include "test_pch.h"
 #include "core/r_pm_gs_k.h"
 #include "core/cell_model.h"
-//#include "core/r_pm_gs_k_cell_model.h"
+#include "core/r_pm_gs_k_cell_model.h"
 #include "core/geo_cell_data.h"
 #include "core/geo_point.h"
 #include "mocks.h"
