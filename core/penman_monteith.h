@@ -42,9 +42,11 @@ namespace shyft::core{
              * TODO: discuss how to manipulate between models and timesteps*/
             struct parameter{
                 double lai = 2.0; //leaf area index, defaulted value taken from MORECS-metoff 1981 model for grass
+                double height_ws = 2.0; // [m], height of windspeed measurements
+                double height_t = 2.0; // [m], height of temperature and relative humidity measurements
                 double hveg = 0.15; // vegetation height, [m] (grass from MORECS)
                 double rl = 50.0; // effective stomatal resistance, [s/m] (calculated for grass from MORECS data)
-                parameter(double hveg=0.12, double lai = 2.0,double rl=50.0) : hveg(hveg), lai(lai), rl(rl) {}
+                parameter(double lai = 2.0,double height_ws = 2.0, double height_t = 2.0, double hveg=0.15, double rl=50.0) : lai(lai), height_ws(height_ws), height_t(height_t), hveg(hveg), rl(rl) {}
             };
             struct response {
                 double et_ref = 0.0; // reference evapotranspiration [mm/h]
@@ -69,7 +71,7 @@ namespace shyft::core{
                  * \param height_ws [m] -- wind speed measurement height
                  * \param windspeed [m/s at height_ws]
                  * \param height_t [m] -- height of humidity,temperature measuerements*/
-                void reference_evapotranspiration_asce(R& response, double net_radiation, double temperature, double rhumidity, double elevation=0.1, double height_ws=2.0, double windspeed=0.1, double height_t=2.0){
+                void reference_evapotranspiration_asce(R& response, double net_radiation, double temperature, double rhumidity, double elevation=0.1, double windspeed=0.1){
 
                     double pressure = atm_pressure(elevation, 293.15);// recommended value for T0 during growing season is 20 gradC, see eq. B.8
                     double lambda_rho = vaporization_latent_heat(temperature)*rho_w;
@@ -82,14 +84,14 @@ namespace shyft::core{
 //                     std::cout<<"G: "<<G<<std::endl;
                     double rho = density_air(pressure, temperature, avp);
 //                     std::cout<<"rho: "<<rho<<std::endl;
-                    double ra = resistance_aerodynamic(height_ws,windspeed);
+                    double ra = resistance_aerodynamic(param.height_ws,windspeed);
 //                     std::cout<<"ra: "<<ra<<std::endl;
                     double sat_vp = svp(temperature);
 //                     std::cout<<"sat_vp: "<<sat_vp<<std::endl;
                     double nominator = delta * (net_radiation + soil_heat_flux(net_radiation)) +
-                                       ktime*density_air(pressure, temperature, avp)*cp/resistance_aerodynamic(height_ws,windspeed, height_t)*(svp(temperature)-avp);
+                                       ktime*density_air(pressure, temperature, avp)*cp/resistance_aerodynamic(param.height_ws,windspeed, param.height_t)*(svp(temperature)-avp);
 //                     std::cout<<"nominator: "<<nominator<<std::endl;
-                    double denominator = delta + gamma_pm(pressure, temperature)*(1+resistance_surface(param.hveg)/resistance_aerodynamic(height_ws,windspeed));
+                    double denominator = delta + gamma_pm(pressure, temperature)*(1+resistance_surface(param.hveg)/resistance_aerodynamic(param.height_ws,windspeed));
 //                     std::cout<<"denominator: "<<denominator<<std::endl;
                     response.et_ref = nominator/denominator/lambda_rho;
                     return;
@@ -103,7 +105,7 @@ namespace shyft::core{
                 * \param height_ws [m] -- wind speed measurement height
                 * \param windspeed [m/s at height_ws]
                 * \param height_t [m] -- height of humidity,temperature measuerements*/
-                void reference_evapotranspiration_st(R& response, double net_radiation, double temperature, double rhumidity, double elevation=0.1, double height_ws=2.0, double windspeed=0.1, double height_t=2.0){
+                void reference_evapotranspiration_st(R& response, double net_radiation, double temperature, double rhumidity, double elevation=0.1, double windspeed=0.1){
 
 //                     double pressure = atm_pressure(elevation, 293.15);// recommended value for T0 during growing season is 20 gradC, see eq. B.8
                     double pressure = 101.3*pow((293.0-0.0065*elevation)/293,5.26); // eq.34
@@ -126,7 +128,7 @@ namespace shyft::core{
                     std::cout<<"G: "<<G<<std::endl;
                     double rho = density_air(pressure, temperature, avp);
 //                     std::cout<<"rho: "<<rho<<std::endl;
-                    double ra = resistance_aerodynamic(height_ws,windspeed);
+                    double ra = resistance_aerodynamic(param.height_ws,windspeed);
 //                     std::cout<<"ra: "<<ra<<std::endl;
                     double sat_vp = svp(temperature);
                     std::cout<<"sat_vp: "<<sat_vp<<std::endl;
@@ -137,9 +139,9 @@ namespace shyft::core{
                     }
 
                     double nominator = 0.408* delta * (net_radiation + soil_heat_flux(net_radiation)) +
-                                       gamma*Cn*ws_adjustment(height_ws,windspeed)*(sat_vp-avp)/(temperature+273);
+                                       gamma*Cn*ws_adjustment(param.height_ws,windspeed)*(sat_vp-avp)/(temperature+273);
 //                     std::cout<<"nominator: "<<nominator<<std::endl;
-                    double denominator = delta + gamma*(1+Cd*ws_adjustment(height_ws,windspeed));
+                    double denominator = delta + gamma*(1+Cd*ws_adjustment(param.height_ws,windspeed));
 //                     std::cout<<"denominator: "<<denominator<<std::endl;
                     response.et_ref = max(0.01,nominator/denominator);
                     return;
@@ -174,6 +176,8 @@ namespace shyft::core{
                 double zoh =  0.0123*param.hveg;// roughness height for transfer of heat and vapor, [m]
                 double kappa = 0.41; // von Karman's constant
 
+//                const double hveg = 0.15;
+//                const double rl = 50;// stomatal resistance
                 /**\brief aerodynamic resistance, [s/m], eq. B.2
                  * \param hws -- wind speed measurements height, [m]
                  * \param ws -- wind speed at height hws, [m/s]

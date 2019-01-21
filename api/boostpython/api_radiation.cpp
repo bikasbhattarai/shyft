@@ -11,7 +11,6 @@ namespace expose {
         using namespace shyft::core::radiation;
         using namespace boost::python;
         namespace py = boost::python;
-        typedef arma::vec surface_normal;
 
         class_<parameter>("RadiationParameter")
             .def(init<double,double>(args("albedo","turbidity"),"a new object with specified parameters"))

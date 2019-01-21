@@ -398,7 +398,7 @@ namespace shyft {
                 std::cout<<"sw radiation:" <<response.rad.sw_radiation<<std::endl;
                 std::cout<<"lw radiation:" <<response.rad.lw_radiation<<std::endl;
                 std::cout<<"net radiation:" <<response.rad.net_radiation<<std::endl;
-                pm.reference_evapotranspiration_asce(response.pm, response.rad.net_radiation*0.0036,temp,rel_hum,altitude,2.0,ws, 2.0); // TODO: move height of measurements into parameters
+                pm.reference_evapotranspiration_asce(response.pm, response.rad.net_radiation*0.0036,temp,rel_hum,altitude,ws); // TODO: move height of measurements into parameters
                 std::cout<<"et_ref: "<<response.pm.et_ref<<std::endl;
                 std::cout<<"----------------------------------------"<<std::endl;
                 //response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*to_seconds(calendar::HOUR); //mm/s -> mm/h

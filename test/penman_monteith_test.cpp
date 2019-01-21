@@ -47,7 +47,7 @@ namespace shyft::test {
 }
 
 
-TEST_SUITE("evapotranspiration") {
+TEST_SUITE("penman_monteith") {
     using namespace shyft::core;
 //    using shyft::core::radiation::surface_normal;
     using shyft::core::calendar;
@@ -86,7 +86,7 @@ TEST_SUITE("evapotranspiration") {
 
 
         //evapotranspiraiton PM
-        penman_monteith::parameter pm_p;
+        penman_monteith::parameter pm_p(2.0,3.0,1.68);
         penman_monteith::response pm_r;
         penman_monteith::calculator<penman_monteith::parameter,penman_monteith::response> pm_calculator(pm_p);
         trapezoidal_average av_et_ref;
@@ -112,7 +112,7 @@ TEST_SUITE("evapotranspiration") {
             std::cout<<"net: "<<rad_r.net_radiation<<std::endl;
             std::cout<<"-----------------"<<std::endl;
             // TODO: move time coefficient to radiation model, think how to choose it, should I have time_axis everywhere?
-            pm_calculator.reference_evapotranspiration_asce(pm_r,rad_r.net_radiation*0.0036,temperature[h-1], rhumidity[h-1],elevation, hws, windspeed[h-1],ht);
+            pm_calculator.reference_evapotranspiration_asce(pm_r,rad_r.net_radiation*0.0036,temperature[h-1], rhumidity[h-1],elevation, windspeed[h-1]);
             std::cout<<"et_ref: "<<pm_r.et_ref<<std::endl;
             std::cout<<"-----------------"<<std::endl;
             av_et_ref.add(pm_r.et_ref, h);
