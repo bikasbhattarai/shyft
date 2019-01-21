@@ -227,7 +227,7 @@ TEST_SUITE("radiation") {
             std::cout << "rs: " << av_rs.result() << std::endl;
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(500.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
-                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(320.0).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(370.0).epsilon(0.05));
 
         }
         SUBCASE("January") {
@@ -249,7 +249,7 @@ TEST_SUITE("radiation") {
             std::cout << "rs: " << av_rs.result() << std::endl;
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(130.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
-                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(65.0).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
         }
         SUBCASE("December") {
             std::cout << "========= December =======" << std::endl;
@@ -270,7 +270,7 @@ TEST_SUITE("radiation") {
             std::cout << "rs: " << av_rs.result() << std::endl;
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(130.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
-                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(65.0).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
         }
 
     }

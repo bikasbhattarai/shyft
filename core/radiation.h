@@ -78,7 +78,7 @@ namespace shyft {
                     response.sw_radiation = tsw_radiation(latitude, t, slope, aspect, temperature, rhumidity, elevation,rsm);
                     response.lw_radiation = lw_radiation(temperature, rhumidity);
                     response.net_radiation = response.sw_radiation+response.lw_radiation;
-                    std::cout<<"calendar time: " <<(utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0)<<std::endl;
+//                    std::cout<<"calendar time: " <<(utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0)<<std::endl;
 
                 }
 
