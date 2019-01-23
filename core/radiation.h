@@ -53,6 +53,8 @@ namespace shyft {
                 double net_radiation = 0.0; // net radiation [W/m^2]
                 double ra = 0.0; // temporary output for extensive testing on python side
                 double rah = 0.0;
+                double omega1 = 0.0;
+                double omega2 = 0.0;
             };
 
             template<class P, class R>
@@ -82,6 +84,8 @@ namespace shyft {
                     response.net_radiation = response.sw_radiation+response.lw_radiation;
                     response.ra = ra_radiation();
                     response.rah = ra_radiation_hor();
+                    response.omega1 = sun_rise();
+                    response.omega2 = sun_set();
 //                    std::cout<<"calendar time: " <<(utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0)<<std::endl;
 
                 }
@@ -254,24 +258,24 @@ namespace shyft {
 
 //
                     // two periods of direct beam radiation (eq.7)
-//                    if (sin(slope) > sin(phi) * cos(delta) + cos(phi) * sin(delta)) {
-//                        double sinA = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
-//                        double A = asin(sinA);
-//                        double sinB = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
-//                        double B = std::asin(sinB);
-//                        omega2_24b_ = std::min(A, B);
-//                        omega1_24b_ = std::max(A, B);
-//                        compute_abc(delta_, phi_, slope_, aspect_);
-//                        double costt_omega2_24b = costt(omega2_24b_);
-//                        if (costt_omega2_24b < -0.001 or costt_omega2_24b > 0.001) { omega2_24b_ = -pi - omega2_24b_; }
-//                        double costt_omega1_24b = costt(omega1_24b_);
-//                        if ((costt_omega1_24b < -0.001 or costt_omega1_24b > 0.001)) { omega1_24b_ = pi - omega1_24b_; }
-//                        if ((omega2_24b_ > omega1_24_) or (omega1_24b_ < omega2_24_)) {
-//                            omega2_24b_ = omega1_24_;
-//                            omega1_24b_ = omega1_24_;
-//                        } // single period of sun
-//                    }
-//                }
+                    if (sin(slope) > sin(phi) * cos(delta) + cos(phi) * sin(delta)) {
+                        double sinA = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
+                        double A = asin(sinA);
+                        double sinB = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
+                        double B = std::asin(sinB);
+                        omega2_24b_ = std::min(A, B);
+                        omega1_24b_ = std::max(A, B);
+                        compute_abc(delta_, phi_, slope_, aspect_);
+                        double costt_omega2_24b = costt(omega2_24b_);
+                        if (costt_omega2_24b < -0.001 or costt_omega2_24b > 0.001) { omega2_24b_ = -pi - omega2_24b_; }
+                        double costt_omega1_24b = costt(omega1_24b_);
+                        if ((costt_omega1_24b < -0.001 or costt_omega1_24b > 0.001)) { omega1_24b_ = pi - omega1_24b_; }
+                        if ((omega2_24b_ > omega1_24_) or (omega1_24b_ < omega2_24_)) {
+                            omega2_24b_ = omega1_24_;
+                            omega1_24b_ = omega1_24_;
+                        } // single period of sun
+                    }
+                }
 
 //                /** \brief computes standard atmospheric pressure
 //                 * \param height, [m] -- elevation of the point
@@ -359,7 +363,8 @@ namespace shyft {
                  * ref.: Allen, R. G.; Trezza, R. & Tasumi, M. Analytical integrated functions for daily solar radiation on slopes Agricultural and Forest Meteorology, 2006, 139, 55-73
                  * \param latitude, [deg]
                  * \param utctime,
-                 * \param surface_normal
+                 * \param slope, [deg]
+                 * \param aspect, [deg]
                  * \param temperature, [degC]
                  * \param rhumidity, [percent]
                  * \param elevation
@@ -371,8 +376,8 @@ namespace shyft {
                     delta_ = compute_earth_declination(doy_);
                     omega_ = hour_angle(lt_); // earth hour angle
 
-                    slope_ = slope;
-                    aspect_ = aspect;
+                    slope_ = slope*pi/180.0;
+                    aspect_ = aspect*pi/180;
                     phi_ = latitude * pi / 180;
                     compute_abc(delta_, phi_, slope, aspect);
                     costt_ = costt(omega_); // eq.(14)
@@ -380,7 +385,7 @@ namespace shyft {
                     costthor_ = costt(omega_);
 
                     compute_sun_rise_set(delta_, phi_, 0.0, 0.0); // for horizontal surface
-                    if (omega_ > omega1_24_ and omega_ < omega2_24_) {
+                    if (omega_ >= omega1_24_ and omega_ <= omega2_24_) {
                         rahor_ = std::max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
                         //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
 //                        ra_ = std::max(0.0, compute_ra(costt_, doy_)); // eq.(1)
@@ -393,7 +398,7 @@ namespace shyft {
 //                    std::cout<<"omega "<<omega_<<std::endl;
 //                    std::cout<<"omega1_24_ "<<omega1_24_<<std::endl;
 //                    std::cout<<"omega2_24_ "<<omega2_24_<<std::endl;
-                    if (omega_ > omega1_24_ and omega_ < omega2_24_) {
+                    if (omega_ >= omega1_24_ and omega_ <= omega2_24_) {
 //                        rahor_ = std::max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
                         //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
                         ra_ = std::max(0.0, compute_ra(costt_, doy_)); // eq.(1)
@@ -438,17 +443,11 @@ namespace shyft {
 
                     double fia_ = fia(Kbohor, Kdohor); //eq.(33)
 
-                    if (omega1_24_ > omega2_24_) {
-                        omega1_24_ = omega2_24_;
-                        ra_ = 0.0;
-                    }//slope is always shaded
-                    //if ((omega_ > omega2_24b_) and (omega_<omega1_24b_) and (omega1_24_<omega2_24b_) and (omega1_24b_<omega2_24_)){ra_ = 0.0;}
-                    // rso_ = max(0.0,Kbo*ra_ + (fia_*Kdo + param.albedo*(1-fi_)*(Kbo+Kdo))*rahor_); // eq.(37)     direct beam + diffuse + reflected, only positive values accepted
-//                    response.dir_radiation = Kbo * ra_;
-//                    response.dif_radiation = fia_ * Kdo * rahor_;
-//                    response.ref_radiation = param.albedo * (1 - fi_) * (Kbo + Kdo) * rahor_;
-//                    response.psw_radiation = response.dir_radiation + response.dif_radiation +
-//                                             response.ref_radiation; // clear sky solar radiation for inclined surface [W/m2]
+//                    if (omega1_24_ >= omega2_24_) {
+//                        omega1_24_ = omega2_24_;
+//                        ra_ = 0.0;
+//                    }//slope is always shaded
+
                     double dir_radiation = Kbo * ra_;
                     double dif_radiation = fia_ * Kdo * rahor_;
                     double ref_radiation = param.albedo * (1 - fi_) * (Kbo + Kdo) * rahor_;
@@ -462,7 +461,8 @@ namespace shyft {
                  * ref.: Allen, R. G.; Trezza, R. & Tasumi, M. Analytical integrated functions for daily solar radiation on slopes Agricultural and Forest Meteorology, 2006, 139, 55-73
                  * \param latitude, [deg]
                  * \param utctime,
-                 * \param surface_normal
+                 * \param slope, [deg]
+                 * \param aspect, [deg]
                  * \param temperature, [degC]
                  * \param rhumidity, [percent]
                  * \param elevation, [m]

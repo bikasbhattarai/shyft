@@ -24,6 +24,8 @@ namespace expose {
             .def_readwrite("net_radiation",&response::net_radiation)
             .def_readwrite("ra",&response::ra)
             .def_readwrite("rah",&response::rah)
+            .def_readwrite("omega1",&response::omega1)
+            .def_readwrite("omega2",&response::omega2)
             ;
 
         typedef calculator<parameter,response> RadiationCalculator;
