@@ -2,14 +2,13 @@
 # See file COPYING for more details **/
 import os
 import time
+from typing import Optional, List, Any, Tuple
 from shyft import api
 from netCDF4 import Dataset
 from .time_conversion import convert_netcdf_time
 from shyft.repository.interfaces import GeoTsRepository, ForecastSelectionCriteria
 from shyft.repository.netcdf.concat_data_repository import ConcatDataRepository
 from shyft.repository.netcdf.met_netcdf_data_repository import MetNetcdfDataRepository
-# import numpy as np
-import datetime
 from shyft.repository.netcdf.utils import _clip_ensemble_of_geo_timeseries
 from shyft.repository.netcdf.utils import parallelize_geo_timeseries
 from shyft.repository.netcdf.utils import merge_ensemble_geo_timeseries
@@ -27,7 +26,7 @@ class WXRepository(GeoTsRepository):
 
         Parameters
         ----------
-        epsg: string
+        epsg: int
             Unique coordinate system id for result coordinates. Currently "32632" and "32633" are supported.
         filename: string
             Path to netcdf file containing weather data
@@ -37,6 +36,13 @@ class WXRepository(GeoTsRepository):
             Flags whether shift of years is allowed
         cache_data: bool
             Use cache data if True
+
+
+        NetCDF4 dataset assumptions depends on boolean value of 'flattened':
+            flattened = False:
+                see requirements of MetNetcdfDataRepository
+            flattened = True:
+                see requirements of ConcatDataRepository with the additional restriction that time-dimension size is 1
         """
         self.allow_year_shift = allow_year_shift
         self.cache_data = cache_data
@@ -97,13 +103,13 @@ class WXRepository(GeoTsRepository):
         """
         wx_repo = self.wx_repo
         if self.allow_year_shift and utc_period is not None:
-            utc_start_date = datetime.datetime.utcfromtimestamp(utc_period.start)
-            repo_date_start = datetime.datetime.utcfromtimestamp(int(wx_repo.time[0]))
-            if utc_start_date.timetuple().tm_yday + utc_start_date.timetuple().tm_hour >= \
-                    repo_date_start.timetuple().tm_yday + repo_date_start.timetuple().tm_hour:
-                utc_start_shifted_year = repo_date_start.timetuple().tm_year
+            utc_start_date = UTC.calendar_units(utc_period.start)
+            repo_start_date = UTC.calendar_units(int(wx_repo.time[0]))
+            if utc_period.start - UTC.time(utc_start_date.year, 1, 1) >= \
+                    int(wx_repo.time[0]) - UTC.time(repo_start_date.year, 1, 1):
+                utc_start_shifted_year = repo_start_date.year
             else:
-                utc_start_shifted_year = repo_date_start.timetuple().tm_year + 1
+                utc_start_shifted_year = repo_start_date.year + 1
             utc_start_shifted = UTC.time(utc_start_shifted_year, utc_start_date.month, utc_start_date.day,  utc_start_date.hour)
             d_t = utc_period.start - utc_start_shifted
             utc_end_shifted = utc_period.end - d_t
@@ -129,10 +135,9 @@ class WXParallelizationRepository(GeoTsRepository):
 
     def __init__(self, epsg, filename, truth_file=None, padding=15000., cache_data=True, numb_years=None):
         """
-        Reads weather scenario from file. Get_timeseire_ensemble and get_forecast_ensemble returns
-        ensemble of weather scenarios using parallelization.
+        Reads weather scenario from flattened netcdf-file(s) of geo-located weather data.
 
-        TODO: describe requirements for netcfdf-file
+        Get_timeseries_ensemble and get_forecast_ensemble returns ensemble of weather scenarios using parallelization.
 
         Parameters
         ----------
@@ -148,6 +153,34 @@ class WXParallelizationRepository(GeoTsRepository):
             Use cache data if True
         numb_years: int
             Limits number of years to return. If None return as many as possible.
+
+
+        NetCDF4 dataset assumptions:
+            * Dimensions:
+                * time (size = 1)
+                * lead_time
+                * ensemble_member (optional) - only first ensemble member is used
+                * grid_point
+            * Variables:
+                * time:(float) array with periodic forecast creation timestamps in seconds since (1970.01.01 00:00, UTC)
+                * lead_time:(float) array with hours since creation time
+                * x: (float) array of latitudes of dims (grid_point)
+                * y: (float) array of longitudes of dims (grid_point)
+                * z: (float) array of altitudes [m] of dims (grid_point)
+                * forecast_is_complete: flag array of dims (time)
+                * crs: has attribute proj4, a string describing the coordinate system
+            * Optional variables:
+                * dew_point_temperature_2m: [K],
+                * surface_air_pressure: [Pa],
+                * relative_humidity_2m: [1],
+                * air_temperature_2m: [K],
+                * precipitation_amount: [kg/m^2],
+                * precipitation_amount_acc: [kg/m^2],
+                * x_wind_10m: [m/s],
+                * y_wind_10m: [m/s],
+                * windspeed_10m: [m/s],
+                * integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time: [W s/m^2]}
+                * All optional variables are (float) array with dims (time, lead_time, [ensemble_member], grid_point)
         """
         self.cache_data = cache_data
         self.cache = None
@@ -177,13 +210,13 @@ class WXParallelizationRepository(GeoTsRepository):
                 # Shift time period for synthetic scenario so they overlap truth scenario
                 syn_start_time = self.syn_repo.wx_repo.time[0]
                 syn_end_time = self.syn_repo.wx_repo.time[0] + self.syn_repo.wx_repo.lead_times_in_sec[-1]
-                truth_end_date = datetime.datetime.utcfromtimestamp(int(truth_end_time))
-                syn_start_date = datetime.datetime.utcfromtimestamp(int(syn_start_time))
-                if truth_end_date.timetuple().tm_yday + truth_end_date.timetuple().tm_hour >= \
-                        syn_start_date.timetuple().tm_yday + syn_start_date.timetuple().tm_hour:
-                    syn_start_shifted_year = truth_end_date.timetuple().tm_year
+                truth_end_date = UTC.calendar_units(int(truth_end_time))
+                syn_start_date =  UTC.calendar_units(int(syn_start_time))
+                if int(truth_end_time) - UTC.time(truth_end_date.year, 1, 1) >= \
+                        int(syn_start_time) - UTC.time(syn_start_date.year, 1, 1):
+                    syn_start_shifted_year = truth_end_date.year
                 else:
-                    syn_start_shifted_year = truth_end_date.timetuple().tm_year - 1
+                    syn_start_shifted_year = truth_end_date.year - 1
                 syn_start_time_shifted = UTC.time(syn_start_shifted_year, syn_start_date.month, syn_start_date.day,
                                                   syn_start_date.hour)
                 d_t = syn_start_time - syn_start_time_shifted

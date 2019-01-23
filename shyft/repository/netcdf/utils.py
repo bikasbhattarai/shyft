@@ -10,7 +10,6 @@ from shapely.prepared import prep
 from functools import partial
 from shapely.geometry import MultiPoint, Polygon, MultiPolygon
 from shyft import api
-import datetime
 
 UTC = api.Calendar()
 
@@ -514,9 +513,16 @@ def _clip_ensemble_of_geo_timeseries(ensemble, utc_period, err, allow_shorter_pe
     if all(list(is_optimal.values())):  # No need to clip if all are optimal
         return ensemble
 
-    return [{key: source_vector_map[key]([source_type_map[key](s.mid_point(), s.ts.average(time_axis[key]))
-                                              for s in geo_ts]) for key, geo_ts in f.items()} for f in ensemble]
-
+    res = []
+    for f in ensemble:
+        d = {}
+        for key, geo_ts in f.items():
+            source_vector = source_vector_map[key]()
+            for s in geo_ts:
+                source_vector.append(source_type_map[key](s.mid_point(), s.ts.average(time_axis[key])))
+            d[key] = source_vector
+        res.append(d)
+    return res
 
 def merge_ensemble_geo_timeseries(first_geo_ts, second_geo_ts, fixed_dt=True):
     """
@@ -571,9 +577,9 @@ def parallelize_geo_timeseries(geo_ts_dict, utc_period, numb_years=None):
         vectors of geo located time series over the same time axis
     """
     ta_orig = geo_ts_dict[list(geo_ts_dict.keys())[0]][0].ts.time_axis
-    first_year_in_ts = datetime.datetime.utcfromtimestamp(ta_orig.time_points[0]).year
-    last_year_in_ts = datetime.datetime.utcfromtimestamp(ta_orig.time_points[-1]).year
-    utc_period_start_date = datetime.datetime.utcfromtimestamp(utc_period.start)
+    first_year_in_ts = UTC.calendar_units(ta_orig.total_period().start).year
+    last_year_in_ts = UTC.calendar_units(ta_orig.total_period().end).year
+    utc_period_start_date = UTC.calendar_units(utc_period.start)
     dt = int(ta_orig.time_points[1] - ta_orig.time_points[0])
     n = utc_period.diff_units(UTC, dt) + 1 
     ensemble = []
