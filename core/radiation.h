@@ -50,7 +50,9 @@ namespace shyft {
             struct response {
                 double sw_radiation = 0.0; // translated  solar radiation on a sloping surface based on measured horizontal radiation [W/m^2]
                 double lw_radiation = 0.0; // long-wave radiation [W/m^2]
-                double net_radiation = 0.0; // net radiation
+                double net_radiation = 0.0; // net radiation [W/m^2]
+                double ra = 0.0; // temporary output for extensive testing on python side
+                double rah = 0.0;
             };
 
             template<class P, class R>
@@ -78,6 +80,8 @@ namespace shyft {
                     response.sw_radiation = tsw_radiation(latitude, t, slope, aspect, temperature, rhumidity, elevation,rsm);
                     response.lw_radiation = lw_radiation(temperature, rhumidity);
                     response.net_radiation = response.sw_radiation+response.lw_radiation;
+                    response.ra = ra_radiation();
+                    response.rah = ra_radiation_hor();
 //                    std::cout<<"calendar time: " <<(utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0)<<std::endl;
 
                 }
@@ -187,7 +191,8 @@ namespace shyft {
 
                     /// TODO: verify this weird sun rise and sunset procedure
 
-                    double bbcc = b_ * b_ + c_ * c_ > 0.0 ? b_ * b_ + c_ * c_ : b_ * b_ + c_ * c_ + 0.0001;
+                    // Lower integration limit
+                    double bbcc = b_ * b_ + c_ * c_ > 0.0 ? b_ * b_ + c_ * c_ : 0.0001;
                     double sqrt_bca = bbcc - a_ * a_ > 0.0 ? bbcc - a_ * a_ : 0.0; // the authors suggest here 0.0001???
                     double sin_omega1 = std::min(1.0, std::max(-1.0, (a_ * c_ - b_ * std::pow(sqrt_bca, 0.5)) / bbcc));//eq.(13a)
                     double omega1 = asin(sin_omega1);
@@ -215,42 +220,58 @@ namespace shyft {
                             }
                         }
                     }
-                    if (omega1_24_ < -omega_s) { omega1_24_ = -omega_s; }
+//                    if (omega1_24_ < -omega_s) { omega1_24_ = -omega_s; }
+                    omega1_24_ = std::max(-omega_s,omega1_24_);
+
+                    // Upper integration limit
                     double sin_omega2 = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));//eq.(13b)
                     double omega2 = asin(sin_omega2);
                     omega2_24_ = omega2;
                     double costt_omega2 = costt(omega2);
-                    if (costt_sunset <= costt_omega2 and costt_omega2 < 0.001) { omega2_24_ = omega2; }
+                    if (costt_sunset <= costt_omega2 and costt_omega2 < 0.001) {
+                        omega2_24_ = omega2;
+                    }
                     else {
                         omega2 = pi - omega2;
-                        if (costt(omega2) > 0.001) { omega2_24_ = omega_s; }
+                        if (costt(omega2) > 0.001) {
+                            omega2_24_ = omega_s;
+                        }
                         else {
-                            if (omega2 >= omega_s) { omega2_24_ = omega_s; }
-                            else { omega2_24_ = omega2; }
+                            if (omega2 >= omega_s) {
+                                omega2_24_ = omega_s;
+                            }
+                            else {
+                                omega2_24_ = omega2;
+                            }
                         }
                     }
-                    if (omega2_24_ > omega_s) { omega2_24_ = omega_s; }
+//                    if (omega2_24_ > omega_s) { omega2_24_ = omega_s; }
+                    omega2_24_ = std::min(omega_s,omega2_24_);
+
+                    if (omega1_24_>omega2_24_){
+                        omega1_24_=omega2_24_;
+                    }// slope is always shaded
 
 //
                     // two periods of direct beam radiation (eq.7)
-                    if (sin(slope) > sin(phi) * cos(delta) + cos(phi) * sin(delta)) {
-                        double sinA = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
-                        double A = asin(sinA);
-                        double sinB = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
-                        double B = std::asin(sinB);
-                        omega2_24b_ = std::min(A, B);
-                        omega1_24b_ = std::max(A, B);
-                        compute_abc(delta_, phi_, slope_, aspect_);
-                        double costt_omega2_24b = costt(omega2_24b_);
-                        if (costt_omega2_24b < -0.001 or costt_omega2_24b > 0.001) { omega2_24b_ = -pi - omega2_24b_; }
-                        double costt_omega1_24b = costt(omega1_24b_);
-                        if ((costt_omega1_24b < -0.001 or costt_omega1_24b > 0.001)) { omega1_24b_ = pi - omega1_24b_; }
-                        if ((omega2_24b_ > omega1_24_) or (omega1_24b_ < omega2_24_)) {
-                            omega2_24b_ = omega1_24_;
-                            omega1_24b_ = omega1_24_;
-                        } // single period of sun
-                    }
-                }
+//                    if (sin(slope) > sin(phi) * cos(delta) + cos(phi) * sin(delta)) {
+//                        double sinA = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
+//                        double A = asin(sinA);
+//                        double sinB = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
+//                        double B = std::asin(sinB);
+//                        omega2_24b_ = std::min(A, B);
+//                        omega1_24b_ = std::max(A, B);
+//                        compute_abc(delta_, phi_, slope_, aspect_);
+//                        double costt_omega2_24b = costt(omega2_24b_);
+//                        if (costt_omega2_24b < -0.001 or costt_omega2_24b > 0.001) { omega2_24b_ = -pi - omega2_24b_; }
+//                        double costt_omega1_24b = costt(omega1_24b_);
+//                        if ((costt_omega1_24b < -0.001 or costt_omega1_24b > 0.001)) { omega1_24b_ = pi - omega1_24b_; }
+//                        if ((omega2_24b_ > omega1_24_) or (omega1_24b_ < omega2_24_)) {
+//                            omega2_24b_ = omega1_24_;
+//                            omega1_24b_ = omega1_24_;
+//                        } // single period of sun
+//                    }
+//                }
 
 //                /** \brief computes standard atmospheric pressure
 //                 * \param height, [m] -- elevation of the point
@@ -358,17 +379,27 @@ namespace shyft {
                     compute_abc(delta_, phi_, 0.0, 0.0);
                     costthor_ = costt(omega_);
 
+                    compute_sun_rise_set(delta_, phi_, 0.0, 0.0); // for horizontal surface
+                    if (omega_ > omega1_24_ and omega_ < omega2_24_) {
+                        rahor_ = std::max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
+                        //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
+//                        ra_ = std::max(0.0, compute_ra(costt_, doy_)); // eq.(1)
+                    } else {
+//                        ra_ = 0.0;
+                        rahor_ = 0.0;
+                    };
+
                     compute_sun_rise_set(delta_, phi_, slope, aspect);
 //                    std::cout<<"omega "<<omega_<<std::endl;
 //                    std::cout<<"omega1_24_ "<<omega1_24_<<std::endl;
 //                    std::cout<<"omega2_24_ "<<omega2_24_<<std::endl;
                     if (omega_ > omega1_24_ and omega_ < omega2_24_) {
-                        rahor_ = std::max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
+//                        rahor_ = std::max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
                         //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
                         ra_ = std::max(0.0, compute_ra(costt_, doy_)); // eq.(1)
                     } else {
                         ra_ = 0.0;
-                        rahor_ = 0.0;
+//                        rahor_ = 0.0;
                     };
 //                    std::cout<<"ra:"<<ra_<<std::endl;
 //                    std::cout<<"rahor:"<<rahor_<<std::endl;
@@ -381,8 +412,7 @@ namespace shyft {
 
                     double Kbo;
                     double sin_beta, sin_betahor;
-                    sin_betahor = abs(
-                            costthor_); // eq.(20) equal to (4), cos_tthor = sin_betahor /// TODO: check if cos_tt = sin_beta is true for inclined surface
+                    sin_betahor = abs(costthor_); // eq.(20) equal to (4), cos_tthor = sin_betahor /// TODO: check if cos_tt = sin_beta is true for inclined surface
                     sin_beta = abs(costt_);
                     // clearness index for direct beam radiation
 

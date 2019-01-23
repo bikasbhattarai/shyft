@@ -96,7 +96,7 @@ namespace shyft::test {
             t_a = t;
         }
 
-        double result() const { return area/(t_a - t_start); }
+        double result() const { /*std::cout<<" times "<<(t_a-t_start)<<std::endl; */return area/(t_a - t_start); }
     };
 
 }
@@ -191,7 +191,7 @@ TEST_SUITE("radiation") {
             av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
             av_ra.initialize(rad.ra_radiation(), 0.0);
             av_rs.initialize(r.sw_radiation, 0.0);
-            for (int h = 1; h < 24; ++h) {
+            for (int h = 0; h < 24; ++h) {
             t = utc_cal.time(1970, 06, 21, h, 00, 0, 0); // June
             rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0, ur(gen));
             av_rahor.add(rad.ra_radiation_hor(), h);
