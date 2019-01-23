@@ -513,9 +513,16 @@ def _clip_ensemble_of_geo_timeseries(ensemble, utc_period, err, allow_shorter_pe
     if all(list(is_optimal.values())):  # No need to clip if all are optimal
         return ensemble
 
-    return [{key: source_vector_map[key]([source_type_map[key](s.mid_point(), s.ts.average(time_axis[key]))
-                                              for s in geo_ts]) for key, geo_ts in f.items()} for f in ensemble]
-
+    res = []
+    for f in ensemble:
+        d = {}
+        for key, geo_ts in f.items():
+            source_vector = source_vector_map[key]()
+            for s in geo_ts:
+                source_vector.append(source_type_map[key](s.mid_point(), s.ts.average(time_axis[key])))
+            d[key] = source_vector
+        res.append(d)
+    return res
 
 def merge_ensemble_geo_timeseries(first_geo_ts, second_geo_ts, fixed_dt=True):
     """
