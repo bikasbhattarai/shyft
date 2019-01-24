@@ -89,6 +89,21 @@ namespace shyft {
 //                    std::cout<<"calendar time: " <<(utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0)<<std::endl;
 
                 }
+                /**\brief computes instantaneous net radiation, [W/m2]*/
+                void net_radiation_step(R &response, double latitude, utctime t1, utctime t2, double slope=0.0, double aspect = 0.0,
+                                   double temperature = 0.0, double rhumidity = 40.0, double elevation = 0.0,
+                                   double rsm = 0.0){
+
+                    response.sw_radiation = psw_radiation_step(latitude, t1,t2, slope, aspect, temperature, rhumidity, elevation);
+                    response.lw_radiation = lw_radiation(temperature, rhumidity);
+                    response.net_radiation = response.sw_radiation+response.lw_radiation;
+                    response.ra = ra_radiation();
+                    response.rah = ra_radiation_hor();
+                    response.omega1 = sun_rise();
+                    response.omega2 = sun_set();
+//                    std::cout<<"calendar time: " <<(utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0)<<std::endl;
+
+                }
 
                 /**\brief net radiation asce-ewri*/
                 void net_radiation_asce_ewri(R &response, double latitude, utctime t, double slope=0.0, double aspect = 0.0,
@@ -151,7 +166,8 @@ namespace shyft {
                 double doy_; // day of the yearI
                 double lt_; // local time
                 double costt_, costthor_;
-                double a_, b_, c_;
+                double a_, b_, c_,g_,h_;
+                double f1_, f2_,f3_,f4_,f5_;
                 double omega1_24_, omega2_24_, omega1_24b_, omega2_24b_; //integration limits, actual periods of sun
                 double fb_;
 
@@ -171,7 +187,32 @@ namespace shyft {
                     a_ = sin(delta) * cos(phi) * sin(s) * cos(gamma) - sin(delta) * sin(phi) * cos(s); // eq.11a
                     b_ = cos(delta) * cos(phi) * cos(s) + cos(delta) * sin(phi) * sin(s) * cos(gamma);//eq 11b
                     c_ = cos(delta) * sin(s) * sin(gamma);
+                    g_ = sin(delta) * sin(phi);
+                    h_ = cos(delta) * cos(phi);
                 }
+                /** \brief computes necessary geometric parameters
+                 * \param omega1, [rad] -- tstart
+                 * \param omega2, [rad] -- tend
+                 * \return f1,f2,f3,f4,f5             * */
+                void compute_fs(double omega1, double omega2) {
+                    f1_ = sin(omega2)-sin(omega1); // eq.11a
+                    f2_ = cos(omega2)-cos(omega1);//eq 11b
+                    f3_ = omega2-omega1;
+                    f4_ =sin(2*omega2)-sin(2*omega1);
+                    f5_ = sin(omega2)*sin(omega2)-sin(omega1)*sin(omega1);
+
+                }
+                /** \brief computes necessary geometric parameters
+                 * \param phi, [rad] -- latitude
+                 * \param s, [rad] -- slope angle
+                 * \param gamma, [rad] -- aspect angle
+                 * \return cos(theta) -- theta -- angle of incidence             * */
+                double compute_beta24() {
+                    double nominator = (b_*g_-a_*h_)*f1_-c_*g_*f2_+(0.5*b_*h_-a_*g_)*f3_+0.25*b_*h_*f4_+0.5*c_*h_*f5_;
+                    double denominator = b_*f1_-c_*f2_-a_*f3_>0?b_*f1_-c_*f2_-a_*f3_:0.0001;
+                    return nominator/denominator;
+                }
+
 
                 /**\brief compute sun rise and sun set values
                  * \param delta,[rad] - earrh declination angle
@@ -344,6 +385,10 @@ namespace shyft {
                     return gsc * cos_theta * (1 + 0.0033 * cos(doy * 2 * pi / 365)); // eq.(1)
                 }
 
+                double compute_ra_step(double cos_theta, double doy) {
+                    return gsc * cos_theta * (1 + 0.0033 * cos(doy * 2 * pi / 365))/pi/2; // eq.(1)
+                }
+
                 double fi() { return 0.75 + 0.25 * cos(slope_) - 0.5 / pi * slope_;/*eq.(32)*/}
 
                 double fia(double kb, double kd) {
@@ -353,9 +398,9 @@ namespace shyft {
                 }
 
                 /**\brief compute 24h parameter*/
-                double costt24(double omega1, double omega2) {
-                    //return -a_*(omega2-omega1) + b_ * (sin(omega2)-sin(omega1))+c_*(cos(omega2)-cos(omega1));
-                    return 2 * (-a_ * (omega2) + b_ * (sin(omega2)) + c_ * (cos(omega2) - 1));
+                double costt_step(double omega1, double omega2) {
+                    return -a_*(omega2-omega1) + b_ * (sin(omega2)-sin(omega1))+c_*(cos(omega2)-cos(omega1));
+                    //return 2 * (-a_ * (omega2) + b_ * (sin(omega2)) + c_ * (cos(omega2) - 1));
                 }
 
 
@@ -457,6 +502,114 @@ namespace shyft {
                     return dir_radiation + dif_radiation + ref_radiation; // predicted clear sky solar radiation for inclined surface [W/m2]
                 }
 
+                /** \brief computes instantaneous predicted short-wave clear-sky radiation (direct, diffuse, reflected) for inclined surfaces
+                * ref.: Allen, R. G.; Trezza, R. & Tasumi, M. Analytical integrated functions for daily solar radiation on slopes Agricultural and Forest Meteorology, 2006, 139, 55-73
+                * \param latitude, [deg]
+                * \param utctime tstart,
+                * \param ucttime tend,
+                * \param slope, [deg]
+                * \param aspect, [deg]
+                * \param temperature, [degC]
+                * \param rhumidity, [percent]
+                * \param elevation
+                * \return */
+                double psw_radiation_step(double latitude, utctime t1, utctime t2, double slope=0.0, double aspect = 0.0,
+                                     double temperature = 0.0, double rhumidity = 40.0, double elevation = 0.0) {
+                    doy_ = utc.day_of_year(t1);
+                    double lt1 = utc.calendar_units(t1).hour + utc.calendar_units(t1).minute / 60.0;
+                    double lt2 = utc.calendar_units(t2).hour + utc.calendar_units(t2).minute / 60.0;
+                    delta_ = compute_earth_declination(doy_);
+                    double omega1 = hour_angle(lt1); // earth hour angle
+                    double omega2 = hour_angle(lt2); // earth hour angle
+//                    std::cout<<"omega1:"<<omega1<<std::endl;
+//                    std::cout<<"omega2:"<<omega2<<std::endl;
+
+                    slope_ = slope*pi/180.0;
+                    aspect_ = aspect*pi/180;
+                    phi_ = latitude * pi / 180;
+                    compute_abc(delta_, phi_, slope, aspect);
+                    costt_ = costt_step(omega1,omega2); // eq.(14)
+                    compute_abc(delta_, phi_, 0.0, 0.0);
+                    costthor_ = costt_step(omega1,omega2);
+
+                    compute_sun_rise_set(delta_, phi_, 0.0, 0.0); // for horizontal surface
+
+//                    std::cout<<"omega1_24:"<<omega1_24_<<std::endl;
+//                    std::cout<<"omega2_24:"<<omega2_24_<<std::endl;
+                    if (omega1 >= omega1_24_ and omega2 <= omega2_24_) {
+                        rahor_ = std::max(0.0, compute_ra_step(costthor_, doy_)); // eq.(1) with cos(theta)hor
+                        //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
+//                        ra_ = std::max(0.0, compute_ra(costt_, doy_)); // eq.(1)
+                    } else {
+//                        ra_ = 0.0;
+                        rahor_ = 0.0;
+                    };
+
+                    compute_sun_rise_set(delta_, phi_, slope, aspect);
+//                    std::cout<<"omega "<<omega_<<std::endl;
+//                    std::cout<<"omega1_24_ "<<omega1_24_<<std::endl;
+//                    std::cout<<"omega2_24_ "<<omega2_24_<<std::endl;
+                    if (omega1 >= omega1_24_ and omega2 <= omega2_24_) {
+//                        rahor_ = std::max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
+                        //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
+                        ra_ = std::max(0.0, compute_ra_step(costt_, doy_)); // eq.(1)
+                    } else {
+                        ra_ = 0.0;
+//                        rahor_ = 0.0;
+                    };
+//                    std::cout<<"ra:"<<ra_<<std::endl;
+//                    std::cout<<"rahor:"<<rahor_<<std::endl;
+
+                    double W; //equivalent depth of precipitable water in the atmosphere[mm]
+                    eatm_ = atm_pressure(
+                            elevation); // [kPa] atmospheric pressure as a function of elevation ///TODO: get elevation from cell.midpoint().z
+                    ea_ = actual_vp(temperature, rhumidity); //[kPa] actual vapor pressure
+                    W = 0.14 * ea_ * eatm_ + 2.1; // eq.(18)
+
+                    double Kbo;
+                    double sin_beta, sin_betahor;
+                    compute_abc(delta_,phi_,0.0,0.0);
+                    compute_fs(omega1,omega2);
+                    double sin_betahor24 = compute_beta24(); // eq.(20) equal to (4), cos_tthor = sin_betahor /// TODO: check if cos_tt = sin_beta is true for inclined surface
+                    compute_abc(delta_,phi_,slope_,aspect_);
+                    double sin_beta24 = compute_beta24();
+                    // clearness index for direct beam radiation
+
+                    Kbo = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm_ / param.turbidity / sin_beta24 -
+                                                                  0.075 * pow((W / sin_beta24), 0.4)))); // eq.(17)
+                    double Kbohor = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm_ / param.turbidity / sin_betahor24 -
+                                                                            0.075 * pow((W / sin_betahor24), 0.4)))); // eq.(17)
+
+                    double Kdo; // transmissivity of diffuse radiation, eq.(19)a,b,c
+                    if (Kbo >= 0.15) { Kdo = 0.35 - 0.36 * Kbo; }
+                    else if (Kbo < 0.15 and Kbo > 0.065) { Kdo = 0.18 + 0.82 * Kbo; }
+                    else { Kdo = 0.10 + 2.08 * Kbo; }
+
+                    double Kdohor;
+                    if (Kbohor >= 0.15) { Kdohor = 0.35 - 0.36 * Kbohor; }
+                    else if (Kbohor < 0.15 and Kbohor > 0.065) { Kdohor = 0.18 + 0.82 * Kbohor; }
+                    else { Kdohor = 0.10 + 2.08 * Kbohor; }
+
+                    double fi_ = fi();//eq.(32)
+
+                    // fb_ = min(5.0,Kbo/Kbohor*ra_/(rahor_>0.0?rahor_:max(0.00001,ra_)));//eq.(34)
+                    fb_ = ra_ / (rahor_ > 0.0 ? rahor_ : std::max(0.00001, ra_));//eq.(34)
+
+                    double fia_ = fia(Kbohor, Kdohor); //eq.(33)
+
+//                    if (omega1_24_ >= omega2_24_) {
+//                        omega1_24_ = omega2_24_;
+//                        ra_ = 0.0;
+//                    }//slope is always shaded
+
+                    double dir_radiation = Kbo * ra_;
+                    double dif_radiation = fia_ * Kdo * rahor_;
+                    double ref_radiation = param.albedo * (1 - fi_) * (Kbo + Kdo) * rahor_;
+//                    std::cout<<"dir: "<<dir_radiation<<std::endl;
+//                    std::cout<<"dif: "<<dif_radiation<<std::endl;
+//                    std::cout<<"ref: "<<ref_radiation<<std::endl;
+                    return dir_radiation + dif_radiation + ref_radiation; // predicted clear sky solar radiation for inclined surface [W/m2]
+                }
                 /**\brief translates measured solar radiation from horizontal surfaces to slopes
                  * ref.: Allen, R. G.; Trezza, R. & Tasumi, M. Analytical integrated functions for daily solar radiation on slopes Agricultural and Forest Meteorology, 2006, 139, 55-73
                  * \param latitude, [deg]
