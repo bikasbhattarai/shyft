@@ -518,28 +518,42 @@ namespace shyft {
                     doy_ = utc.day_of_year(t1);
                     double lt1 = utc.calendar_units(t1).hour + utc.calendar_units(t1).minute / 60.0;
                     double lt2 = utc.calendar_units(t2).hour + utc.calendar_units(t2).minute / 60.0;
-                    std::cout<<"---timestep----"<<std::endl;
-                    std::cout<<lt2-lt1<<std::endl;
-                    std::cout<<"---timestep----"<<std::endl;
+//                    std::cout<<"---timestep----"<<std::endl;
+//                    std::cout<<lt2-lt1<<std::endl;
+//                    std::cout<<"---timestep----"<<std::endl;
                     delta_ = compute_earth_declination(doy_);
                     double omega1 = hour_angle(lt1); // earth hour angle
                     double omega2 = hour_angle(lt2); // earth hour angle
-//                    std::cout<<"omega1:"<<omega1<<std::endl;
-//                    std::cout<<"omega2:"<<omega2<<std::endl;
 
                     slope_ = slope*pi/180.0;
                     aspect_ = aspect*pi/180;
                     phi_ = latitude * pi / 180;
 
 
-
+//                  /// TODO: we need something smarter for step-checking
+                    // NEXT Calculations is done to define the integration limits properly, based on the step
                     compute_sun_rise_set(delta_, phi_, 0.0, 0.0); // for horizontal surface
 
-//                    std::cout<<"omega1_24:"<<omega1_24_<<std::endl;
-//                    std::cout<<"omega2_24:"<<omega2_24_<<std::endl;
+                    // 24-h step: integrate over full period
                     if ((lt2-lt1)>=23) {
                         omega1 = std::max(omega1, omega1_24_);
                         omega2 = std::min(omega2, omega2_24_);
+                    }
+
+                    // 3-h step
+                    if ((lt2-lt1)>2 and (lt2-lt1)<4){
+//                        if ((omega1<omega1_24_) and (omega2<omega1_24_)){
+//                            omega1=omega2;
+//                        }
+//                        if ((omega1>omega2_24_) and (omega2>omega2_24_)){
+//                            omega1=omega2;
+//                        }
+                        if ((omega1<omega1_24_) and (omega2<=omega2_24_)){
+                            omega1 = omega1_24_;
+                        }
+                        if ((omega2>omega2_24_) and (omega1>=omega1_24_)){
+                            omega2 = omega2_24_;
+                        }
                     }
 
                     compute_abc(delta_, phi_, 0.0, 0.0);
@@ -547,10 +561,7 @@ namespace shyft {
 
                     if (omega1 >= omega1_24_ and omega2 <= omega2_24_) {
                         rahor_ = std::max(0.0, compute_ra_step(costthor_, doy_)); // eq.(1) with cos(theta)hor
-                        //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
-//                        ra_ = std::max(0.0, compute_ra(costt_, doy_)); // eq.(1)
                     } else {
-//                        ra_ = 0.0;
                         rahor_ = 0.0;
                     };
 
@@ -561,21 +572,28 @@ namespace shyft {
                         omega2 = std::min(omega2, omega2_24_);
                     }
 
+                    // 3-h step
+                    if ((lt2-lt1)>2 and (lt2-lt1)<4){
+                        if ((omega1<omega1_24_) and (omega2<=omega2_24_)){
+                            omega1 = omega1_24_;
+                        }
+                        if ((omega2>omega2_24_) and (omega1>=omega1_24_)){
+                            omega2 = omega2_24_;
+                        }
+                    }
+
                     compute_abc(delta_, phi_, slope, aspect);
                     costt_ = costt_step(omega1,omega2); // eq.(14)
-//                    std::cout<<"omega "<<omega_<<std::endl;
-//                    std::cout<<"omega1_24_ "<<omega1_24_<<std::endl;
-//                    std::cout<<"omega2_24_ "<<omega2_24_<<std::endl;
+
+
                     if (omega1 >= omega1_24_ and omega2 <= omega2_24_) {
-//                        rahor_ = std::max(0.0, compute_ra(costthor_, doy_)); // eq.(1) with cos(theta)hor
-                        //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
                         ra_ = std::max(0.0, compute_ra_step(costt_, doy_)); // eq.(1)
                     } else {
                         ra_ = 0.0;
-//                        rahor_ = 0.0;
                     };
-//                    std::cout<<"ra:"<<ra_<<std::endl;
-//                    std::cout<<"rahor:"<<rahor_<<std::endl;
+                    // END of limits definition
+
+
 
                     double W; //equivalent depth of precipitable water in the atmosphere[mm]
                     eatm_ = atm_pressure(
@@ -588,8 +606,11 @@ namespace shyft {
                     compute_abc(delta_,phi_,0.0,0.0);
                     compute_fs(omega1,omega2);
                     double sin_betahor24 = compute_beta24(); // eq.(20) equal to (4), cos_tthor = sin_betahor
+                    std::cout<<"sin_betahor24: "<<sin_betahor24<<std::endl;
                     compute_abc(delta_,phi_,slope_,aspect_);
+                    compute_fs(omega1,omega2);
                     double sin_beta24 = compute_beta24();
+                    std::cout<<"sin_beta24: "<<sin_beta24<<std::endl;
                     // clearness index for direct beam radiation
 
                     Kbo = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm_ / param.turbidity / sin_beta24 -
@@ -612,6 +633,7 @@ namespace shyft {
                     // fb_ = min(5.0,Kbo/Kbohor*ra_/(rahor_>0.0?rahor_:max(0.00001,ra_)));//eq.(34)
                     fb_ = ra_ / (rahor_ > 0.0 ? rahor_ : std::max(0.00001, ra_));//eq.(34)
 
+                    std::cout<<"Kbohor: "<<Kbohor<<std::endl;
                     double fia_ = fia(Kbohor, Kdohor); //eq.(33)
 
 //                    if (omega1_24_ >= omega2_24_) {
@@ -622,9 +644,9 @@ namespace shyft {
                     double dir_radiation = Kbo * ra_;
                     double dif_radiation = fia_ * Kdo * rahor_;
                     double ref_radiation = param.albedo * (1 - fi_) * (Kbo + Kdo) * rahor_;
-//                    std::cout<<"dir: "<<dir_radiation<<std::endl;
-//                    std::cout<<"dif: "<<dif_radiation<<std::endl;
-//                    std::cout<<"ref: "<<ref_radiation<<std::endl;
+                    std::cout<<"dir: "<<dir_radiation<<std::endl;
+                    std::cout<<"dif: "<<dif_radiation<<std::endl;
+                    std::cout<<"ref: "<<ref_radiation<<std::endl;
                     return dir_radiation + dif_radiation + ref_radiation; // predicted clear sky solar radiation for inclined surface [W/m2]
                 }
                 /**\brief translates measured solar radiation from horizontal surfaces to slopes

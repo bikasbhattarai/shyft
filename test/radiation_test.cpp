@@ -232,13 +232,10 @@ TEST_SUITE("radiation") {
         }
         SUBCASE("June") {
             std::cout << "========= June step ========" << std::endl;
-            ta1 = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
-            ta2 = utc_cal.time(2002, 06, 21, 01, 00, 0, 0);
+//            ta1 = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
+//            ta2 = utc_cal.time(2002, 06, 21, 01, 00, 0, 0);
             //rad.psw_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-            rad.net_radiation_step(r, lat, ta1,ta2, slope,aspect, 20.0, 50.0, 150.0);
-            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-            av_ra.initialize(rad.ra_radiation(), 0.0);
-            av_rs.initialize(r.sw_radiation, 0.0);
+//            rad.net_radiation_step(r, lat, ta1,ta2, slope,aspect, 20.0, 50.0, 150.0);
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -246,23 +243,18 @@ TEST_SUITE("radiation") {
                 t2 = utc_cal.time(2002, 10, 21, h, 00, 0, 0); // June
                 //rad.psw_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
                 rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
-                std::cout<<rad.ra_radiation()<<std::endl;
-                rastep+=rad.ra_radiation();
-                av_rahor.add(rad.ra_radiation_hor(), h);
+//                std::cout<<rad.ra_radiation()<<std::endl;
+                rastep+=r.ra;
                 rsostep+=r.sw_radiation;
-                av_ra.add(rad.ra_radiation(), h);
-                av_rs.add(r.sw_radiation, h);
             }
 
-            std::cout << "ra: " << av_ra.result() << std::endl;
-            std::cout << "rs: " << av_rs.result() << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
-            FAST_CHECK_EQ(av_ra.result(), doctest::Approx(500.0).epsilon(0.05));
-            FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
-            FAST_CHECK_EQ(av_rs.result(), doctest::Approx(370.0).epsilon(0.05));
+            FAST_CHECK_EQ(rastep, doctest::Approx(500.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(370.0).epsilon(0.05));
 
-        }
+
+}
 //        SUBCASE("January") {
 //            std::cout << "========= January =======" << std::endl;
 //            ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
