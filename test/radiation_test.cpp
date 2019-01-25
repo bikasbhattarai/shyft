@@ -242,8 +242,8 @@ TEST_SUITE("radiation") {
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
-                t1 = utc_cal.time(2002, 06, 21, h-1, 00, 0, 0); // June
-                t2 = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+                t1 = utc_cal.time(2002, 10, 21, h-1, 00, 0, 0); // June
+                t2 = utc_cal.time(2002, 10, 21, h, 00, 0, 0); // June
                 //rad.psw_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
                 rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
                 std::cout<<rad.ra_radiation()<<std::endl;

@@ -518,6 +518,9 @@ namespace shyft {
                     doy_ = utc.day_of_year(t1);
                     double lt1 = utc.calendar_units(t1).hour + utc.calendar_units(t1).minute / 60.0;
                     double lt2 = utc.calendar_units(t2).hour + utc.calendar_units(t2).minute / 60.0;
+                    std::cout<<"---timestep----"<<std::endl;
+                    std::cout<<lt2-lt1<<std::endl;
+                    std::cout<<"---timestep----"<<std::endl;
                     delta_ = compute_earth_declination(doy_);
                     double omega1 = hour_angle(lt1); // earth hour angle
                     double omega2 = hour_angle(lt2); // earth hour angle
@@ -527,15 +530,21 @@ namespace shyft {
                     slope_ = slope*pi/180.0;
                     aspect_ = aspect*pi/180;
                     phi_ = latitude * pi / 180;
-                    compute_abc(delta_, phi_, slope, aspect);
-                    costt_ = costt_step(omega1,omega2); // eq.(14)
-                    compute_abc(delta_, phi_, 0.0, 0.0);
-                    costthor_ = costt_step(omega1,omega2);
+
+
 
                     compute_sun_rise_set(delta_, phi_, 0.0, 0.0); // for horizontal surface
 
 //                    std::cout<<"omega1_24:"<<omega1_24_<<std::endl;
 //                    std::cout<<"omega2_24:"<<omega2_24_<<std::endl;
+                    if ((lt2-lt1)>=23) {
+                        omega1 = std::max(omega1, omega1_24_);
+                        omega2 = std::min(omega2, omega2_24_);
+                    }
+
+                    compute_abc(delta_, phi_, 0.0, 0.0);
+                    costthor_ = costt_step(omega1,omega2);
+
                     if (omega1 >= omega1_24_ and omega2 <= omega2_24_) {
                         rahor_ = std::max(0.0, compute_ra_step(costthor_, doy_)); // eq.(1) with cos(theta)hor
                         //ra_ = min(rahor_,max(0.0,compute_ra(costt_,doy_))); // eq.(1)
@@ -546,6 +555,14 @@ namespace shyft {
                     };
 
                     compute_sun_rise_set(delta_, phi_, slope, aspect);
+
+                    if ((lt2-lt1)>=23) {
+                        omega1 = std::max(omega1, omega1_24_);
+                        omega2 = std::min(omega2, omega2_24_);
+                    }
+
+                    compute_abc(delta_, phi_, slope, aspect);
+                    costt_ = costt_step(omega1,omega2); // eq.(14)
 //                    std::cout<<"omega "<<omega_<<std::endl;
 //                    std::cout<<"omega1_24_ "<<omega1_24_<<std::endl;
 //                    std::cout<<"omega2_24_ "<<omega2_24_<<std::endl;
@@ -562,7 +579,7 @@ namespace shyft {
 
                     double W; //equivalent depth of precipitable water in the atmosphere[mm]
                     eatm_ = atm_pressure(
-                            elevation); // [kPa] atmospheric pressure as a function of elevation ///TODO: get elevation from cell.midpoint().z
+                            elevation); // [kPa] atmospheric pressure as a function of elevation
                     ea_ = actual_vp(temperature, rhumidity); //[kPa] actual vapor pressure
                     W = 0.14 * ea_ * eatm_ + 2.1; // eq.(18)
 
@@ -570,7 +587,7 @@ namespace shyft {
                     double sin_beta, sin_betahor;
                     compute_abc(delta_,phi_,0.0,0.0);
                     compute_fs(omega1,omega2);
-                    double sin_betahor24 = compute_beta24(); // eq.(20) equal to (4), cos_tthor = sin_betahor /// TODO: check if cos_tt = sin_beta is true for inclined surface
+                    double sin_betahor24 = compute_beta24(); // eq.(20) equal to (4), cos_tthor = sin_betahor
                     compute_abc(delta_,phi_,slope_,aspect_);
                     double sin_beta24 = compute_beta24();
                     // clearness index for direct beam radiation
