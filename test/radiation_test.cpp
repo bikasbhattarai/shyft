@@ -138,30 +138,10 @@ TEST_SUITE("radiation") {
         slopes = rasputin::slopes(points,faces);
         for (const auto s:slopes)
             std::cout<<s<<std::endl;
-        //FAST_CHECK_EQ(tr.slope, doctest::Approx(0.0).epsilon(0.01));
-//        FAST_CHECK_EQ(tr.aspect, doctest::Approx(0.0).epsilon(0.01));
-
 
 
 
     }
-//    TEST_CASE("check_slope_aspect"){
-//        /**\brief check slope and aspect*/
-//        parameter p;
-//        response r;
-//        p.albedo = 0.2;
-//        p.turbidity = 1.0;
-//        calculator<parameter,response> rad(p);
-//        calendar utc_cal;
-//        double lat = 44.0;
-//        utctime t;
-//        // checking for horizontal surface Eugene, OR, p.64, fig.1b
-//        arma::vec surface_normal({0.0,0.0,1.0});
-//        t = utc_cal.time(1970, 12, 21, 12, 30, 0, 0);
-//        rad.psw_radiation(r, lat, t, surface_normal, 20.0, 50.0, 150.0);
-//        FAST_CHECK_EQ(rad.slope(), doctest::Approx(0.0).epsilon(0.01));
-//        FAST_CHECK_EQ(rad.aspect(), doctest::Approx(0.0).epsilon(0.01));
-//    }
 
     TEST_CASE("check_solar_radiation_horizontal"){
         parameter p;
@@ -192,11 +172,11 @@ TEST_SUITE("radiation") {
             av_ra.initialize(rad.ra_radiation(), 0.0);
             av_rs.initialize(r.sw_radiation, 0.0);
             for (int h = 0; h < 24; ++h) {
-            t = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
-            rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0, ur(gen));
-            av_rahor.add(rad.ra_radiation_hor(), h);
-            av_ra.add(rad.ra_radiation(), h);
-            av_rs.add(r.sw_radiation, h);
+                t = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0, ur(gen));
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
             }
 
             std::cout << "ra: " << av_ra.result() << std::endl;
@@ -232,18 +212,12 @@ TEST_SUITE("radiation") {
         }
         SUBCASE("June") {
             std::cout << "========= June step ========" << std::endl;
-//            ta1 = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
-//            ta2 = utc_cal.time(2002, 06, 21, 01, 00, 0, 0);
-            //rad.psw_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            rad.net_radiation_step(r, lat, ta1,ta2, slope,aspect, 20.0, 50.0, 150.0);
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
                 t1 = utc_cal.time(2002, 10, 21, h-1, 00, 0, 0); // June
                 t2 = utc_cal.time(2002, 10, 21, h, 00, 0, 0); // June
-                //rad.psw_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
                 rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
-//                std::cout<<rad.ra_radiation()<<std::endl;
                 rastep+=r.ra;
                 rsostep+=r.sw_radiation;
             }
