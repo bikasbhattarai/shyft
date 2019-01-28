@@ -110,6 +110,8 @@ TEST_SUITE("radiation") {
     using shyft::core::calendar;
     using shyft::core::utctime;
     using shyft::test::trapezoidal_average;
+    bool verbose= getenv("SHYFT_VERBOSE")!=nullptr;
+//    bool verbose = true;
     // test basics: creation, etc
 
 
@@ -130,15 +132,16 @@ TEST_SUITE("radiation") {
 
         std::vector<std::array<double,3>> normals;
         normals = rasputin::surface_normals(points,faces);
-        for (const auto n:normals)
-            std::cout<<n.at(0)<<"; "<<n.at(1) << "; "<<n.at(2)<<std::endl;
+        if (verbose){
+            for (const auto n:normals)
+                std::cout<<n.at(0)<<"; "<<n.at(1) << "; "<<n.at(2)<<std::endl;
 
-        std::vector<double> slopes;
+            std::vector<double> slopes;
 
-        slopes = rasputin::slopes(points,faces);
-        for (const auto s:slopes)
-            std::cout<<s<<std::endl;
-
+            slopes = rasputin::slopes(points, faces);
+            for (const auto s:slopes)
+                std::cout<<s<<std::endl;
+        }
 
 
     }
@@ -161,7 +164,7 @@ TEST_SUITE("radiation") {
         trapezoidal_average av_rs;
         std::uniform_real_distribution<double> ur(150.0, 390.0);
         std::default_random_engine gen;
-//        std::cout << "========= Horizontal =======" << std::endl;
+//
         SUBCASE("June_translated") {
 //            std::cout << "========= June translated ========" << std::endl;
             ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
@@ -186,7 +189,7 @@ TEST_SUITE("radiation") {
 
         }
         SUBCASE("June") {
-//            std::cout << "========= June ========" << std::endl;
+//
             ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
             //rad.psw_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
@@ -202,15 +205,19 @@ TEST_SUITE("radiation") {
                 av_rs.add(r.sw_radiation, h);
             }
 
-            std::cout << "ra: " << av_ra.result() << std::endl;
-            std::cout << "rs: " << av_rs.result() << std::endl;
+            if (verbose){
+std::cout << "========= Horizontal =======" << std::endl;
+std::cout << "========= June ========" << std::endl;
+                std::cout << "ra: " << av_ra.result()<<std::endl;
+                std::cout << "rs: " << av_rs.result()<<std::endl;
+            }
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(500.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
                     FAST_CHECK_EQ(av_rs.result(), doctest::Approx(370.0).epsilon(0.05));
 
         }
         SUBCASE("January") {
-            std::cout << "========= January =======" << std::endl;
+//
             ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
             av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
@@ -224,14 +231,17 @@ TEST_SUITE("radiation") {
                 av_rs.add(r.sw_radiation, h);
             }
 
-            std::cout << "ra: " << av_ra.result() << std::endl;
-            std::cout << "rs: " << av_rs.result() << std::endl;
+            if (verbose){
+std::cout << "========= January =======" << std::endl;
+            std::cout << "ra: " << av_ra.result()<<std::endl;
+            std::cout << "rs: " << av_rs.result()<<std::endl;
+            }
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(130.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
                     FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
         }
         SUBCASE("December") {
-            std::cout << "========= December =======" << std::endl;
+//
             ta = utc_cal.time(2002, 12, 21, 00, 00, 0, 0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
             av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
@@ -245,8 +255,11 @@ TEST_SUITE("radiation") {
                 av_rs.add(r.sw_radiation, h);
             }
 
-            std::cout << "ra: " << av_ra.result() << std::endl;
-            std::cout << "rs: " << av_rs.result() << std::endl;
+            if (verbose){
+std::cout << "========= December =======" << std::endl;
+            std::cout << "ra: " << av_ra.result()<<std::endl;
+            std::cout << "rs: " << av_rs.result()<<std::endl;
+            }
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(130.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
                     FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
@@ -268,9 +281,9 @@ TEST_SUITE("radiation") {
     utctime ta1,ta2;
     std::uniform_real_distribution<double> ur(150.0, 390.0);
     std::default_random_engine gen;
-    //        std::cout << "========= Horizontal =======" << std::endl;
+    //
     SUBCASE("June_translated") {
-        //            std::cout << "========= June translated ========" << std::endl;
+        //
         double rastep = 0.0;
         double rsostep = 0.0;
         for (int h = 1; h < 24; ++h) {
@@ -281,13 +294,17 @@ TEST_SUITE("radiation") {
             rsostep+=r.sw_radiation;
         }
 
-        std::cout << "rastep: " << rastep << std::endl;
-        std::cout << "rsostep: " << rsostep << std::endl;
+        if (verbose){
+std::cout << "========= Horizontal =======" << std::endl;
+std::cout << "========= June translated ========" << std::endl;
+        std::cout << "ra: " << rastep<<std::endl;
+        std::cout << "rs: " << rsostep<<std::endl;
+        }
 
 
     }
     SUBCASE("June") {
-        std::cout << "========= June step ========" << std::endl;
+//
         double rastep = 0.0;
         double rsostep = 0.0;
         for (int h = 1; h < 24; ++h) {
@@ -298,15 +315,18 @@ TEST_SUITE("radiation") {
             rsostep+=r.sw_radiation;
         }
 
-        std::cout << "rastep: " << rastep << std::endl;
-        std::cout << "rsostep: " << rsostep << std::endl;
+        if (verbose){
+std::cout << "========= June step ========" << std::endl;
+        std::cout << "ra: " << rastep<<std::endl;
+        std::cout << "rs: " << rsostep<<std::endl;
+        }
         FAST_CHECK_EQ(rastep, doctest::Approx(500.0).epsilon(0.05));
         FAST_CHECK_EQ(rsostep, doctest::Approx(370.0).epsilon(0.05));
 
 
     }
     SUBCASE("January") {
-        std::cout << "========= January =======" << std::endl;
+//
         double rastep = 0.0;
         double rsostep = 0.0;
         for (int h = 1; h < 24; ++h) {
@@ -316,13 +336,16 @@ TEST_SUITE("radiation") {
             rastep+=r.ra;
             rsostep+=r.sw_radiation;
         }
-        std::cout << "rastep: " << rastep << std::endl;
-        std::cout << "rsostep: " << rsostep << std::endl;
+        if (verbose){
+std::cout << "========= January =======" << std::endl;
+        std::cout << "ra: " << rastep<<std::endl;
+        std::cout << "rs: " << rsostep<<std::endl;
+        }
         FAST_CHECK_EQ(rastep, doctest::Approx(130.0).epsilon(0.05));
         FAST_CHECK_EQ(rsostep, doctest::Approx(75.0).epsilon(0.05));
     }
     SUBCASE("December") {
-        std::cout << "========= December =======" << std::endl;
+//
         double rastep = 0.0;
         double rsostep = 0.0;
         for (int h = 1; h < 24; ++h) {
@@ -332,8 +355,11 @@ TEST_SUITE("radiation") {
             rastep+=r.ra;
             rsostep+=r.sw_radiation;
         }
-        std::cout << "rastep: " << rastep << std::endl;
-        std::cout << "rsostep: " << rsostep << std::endl;
+        if (verbose){
+std::cout << "========= December =======" << std::endl;
+        std::cout << "ra: " << rastep<<std::endl;
+        std::cout << "rs: " << rsostep<<std::endl;
+        }
         FAST_CHECK_EQ(rastep, doctest::Approx(130.0).epsilon(0.05));
         FAST_CHECK_EQ(rsostep, doctest::Approx(75.0).epsilon(0.05));
     }
@@ -362,9 +388,9 @@ TEST_SUITE("radiation") {
         trapezoidal_average av_rs;
         std::uniform_real_distribution<double> ur(100.0, 390.0);
         std::default_random_engine gen;
-        std::cout << "========= Slope 45S =======" << std::endl;
+//
         SUBCASE("June_translated") {
-            std::cout << "========= June translated ========" << std::endl;
+//
             ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
             av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
@@ -378,16 +404,20 @@ TEST_SUITE("radiation") {
                 av_rs.add(r.sw_radiation, h);
             }
 
+            if (verbose){
+std::cout << "========= Slope 45S =======" << std::endl;
+std::cout << "========= June translated ========" << std::endl;
             std::cout << "rahor: " << av_rahor.result() << std::endl;
             std::cout << "ra: " << av_ra.result() << std::endl;
             std::cout << "rs: " << av_rs.result() << std::endl;
             std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
             std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            }
             FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
             //FAST_CHECK_EQ(av_rs.result(), doctest::Approx(310.0).epsilon(0.05));
         }
         SUBCASE("June") {
-            std::cout << "========= June ========" << std::endl;
+//
             ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
 //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
@@ -401,17 +431,19 @@ TEST_SUITE("radiation") {
                 av_ra.add(rad.ra_radiation(), h);
                 av_rs.add(r.sw_radiation, h);
             }
-
+            if (verbose){
+std::cout << "========= June ========" << std::endl;
             std::cout << "rahor: " << av_rahor.result() << std::endl;
             std::cout << "ra: " << av_ra.result() << std::endl;
             std::cout << "rs: " << av_rs.result() << std::endl;
             std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
             std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            }
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rs.result(), doctest::Approx(310.0).epsilon(0.05));
         }
         SUBCASE("January") {
-            std::cout << "========= January ========" << std::endl;
+//
             ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
 //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
@@ -425,16 +457,19 @@ TEST_SUITE("radiation") {
                 av_ra.add(rad.ra_radiation(), h);
                 av_rs.add(r.sw_radiation, h);
             }
+            if (verbose){
+std::cout << "========= January ========" << std::endl;
             std::cout << "rahor: " << av_rahor.result() << std::endl;
             std::cout << "ra: " << av_ra.result() << std::endl;
             std::cout << "rs: " << av_rs.result() << std::endl;
             std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
             std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            }
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rs.result(), doctest::Approx(270.0).epsilon(0.05));
         }
         SUBCASE("December") {
-            std::cout << "========= December ========" << std::endl;
+//
             ta = utc_cal.time(2002, 12, 12, 00, 00, 0, 0);
 //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
@@ -448,9 +483,12 @@ TEST_SUITE("radiation") {
                 av_ra.add(rad.ra_radiation(), h);
                 av_rs.add(r.sw_radiation, h);
             }
+            if (verbose){
+std::cout << "========= December ========" << std::endl;
             std::cout << "rahor: " << av_rahor.result() << std::endl;
             std::cout << "ra: " << av_ra.result() << std::endl;
             std::cout << "rs: " << av_rs.result() << std::endl;
+            }
                     FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
                     FAST_CHECK_EQ(av_rs.result(), doctest::Approx(270.0).epsilon(0.05));
         }
@@ -473,7 +511,7 @@ TEST_SUITE("radiation") {
         std::default_random_engine gen;
 
         SUBCASE("June") {
-            std::cout << "========= June step ========" << std::endl;
+//
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -484,15 +522,18 @@ TEST_SUITE("radiation") {
             rsostep+=r.sw_radiation;
             }
 
+            if (verbose){
+            std::cout << "========= June step ========" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(390.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(310.0).epsilon(0.05));
 
 
         }
         SUBCASE("January") {
-            std::cout << "========= January =======" << std::endl;
+//
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -502,13 +543,16 @@ TEST_SUITE("radiation") {
             rastep+=r.ra;
             rsostep+=r.sw_radiation;
             }
+            if (verbose){
+            std::cout << "========= January =======" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(370.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(180.0).epsilon(0.05));
         }
         SUBCASE("December") {
-            std::cout << "========= December =======" << std::endl;
+
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -518,8 +562,11 @@ TEST_SUITE("radiation") {
             rastep+=r.ra;
             rsostep+=r.sw_radiation;
             }
+            if (verbose){
+            std::cout << "========= December =======" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(370.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(180.0).epsilon(0.05));
         }
@@ -547,9 +594,9 @@ TEST_SUITE("radiation") {
         trapezoidal_average av_rs;
         std::uniform_real_distribution<double> ur(100.0, 390.0);
         std::default_random_engine gen;
-        std::cout << "========= Slope 90S =======" << std::endl;
+
         SUBCASE("June_translated") {
-            std::cout << "========= June translated ========" << std::endl;
+
             ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
             av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
@@ -562,17 +609,20 @@ TEST_SUITE("radiation") {
                 av_ra.add(rad.ra_radiation(), h);
                 av_rs.add(r.sw_radiation, h);
             }
-
+            if (verbose){
+            std::cout << "========= Slope 90S =======" << std::endl;
+            std::cout << "========= June translated ========" << std::endl;
             std::cout << "rahor: " << av_rahor.result() << std::endl;
             std::cout << "ra: " << av_ra.result() << std::endl;
             std::cout << "rs: " << av_rs.result() << std::endl;
             std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
             std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            }
             FAST_CHECK_EQ(av_ra.result(), doctest::Approx(110.0).epsilon(0.05));
         //FAST_CHECK_EQ(av_rs.result(), doctest::Approx(310.0).epsilon(0.05));
         }
         SUBCASE("June") {
-            std::cout << "========= June ========" << std::endl;
+
             ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
             //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
@@ -586,17 +636,20 @@ TEST_SUITE("radiation") {
                 av_ra.add(rad.ra_radiation(), h);
                 av_rs.add(r.sw_radiation, h);
             }
+            if (verbose){
+            std::cout << "========= June ========" << std::endl;
 
             std::cout << "rahor: " << av_rahor.result() << std::endl;
             std::cout << "ra: " << av_ra.result() << std::endl;
             std::cout << "rs: " << av_rs.result() << std::endl;
             std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
             std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            }
             FAST_CHECK_EQ(av_ra.result(), doctest::Approx(110.0).epsilon(0.05));
             FAST_CHECK_EQ(av_rs.result(), doctest::Approx(90.0).epsilon(0.05));
         }
         SUBCASE("January") {
-            std::cout << "========= January ========" << std::endl;
+
             ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
             //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
@@ -610,16 +663,19 @@ TEST_SUITE("radiation") {
                 av_ra.add(rad.ra_radiation(), h);
                 av_rs.add(r.sw_radiation, h);
             }
+            if (verbose){
+            std::cout << "========= January ========" << std::endl;
             std::cout << "rahor: " << av_rahor.result() << std::endl;
             std::cout << "ra: " << av_ra.result() << std::endl;
             std::cout << "rs: " << av_rs.result() << std::endl;
             std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
             std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            }
             FAST_CHECK_EQ(av_ra.result(), doctest::Approx(410.0).epsilon(0.05));
             FAST_CHECK_EQ(av_rs.result(), doctest::Approx(300.0).epsilon(0.05));
         }
         SUBCASE("December") {
-            std::cout << "========= December ========" << std::endl;
+            ;
             ta = utc_cal.time(2002, 12, 12, 00, 00, 0, 0);
             //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
@@ -633,9 +689,12 @@ TEST_SUITE("radiation") {
                 av_ra.add(rad.ra_radiation(), h);
                 av_rs.add(r.sw_radiation, h);
             }
+            if (verbose){
+            std::cout << "========= December ========" << std::endl;
             std::cout << "rahor: " << av_rahor.result() << std::endl;
             std::cout << "ra: " << av_ra.result() << std::endl;
             std::cout << "rs: " << av_rs.result() << std::endl;
+            }
             FAST_CHECK_EQ(av_ra.result(), doctest::Approx(410.0).epsilon(0.05));
             FAST_CHECK_EQ(av_rs.result(), doctest::Approx(300.0).epsilon(0.05));
         }
@@ -657,9 +716,9 @@ TEST_SUITE("radiation") {
         utctime ta1,ta2;
         std::uniform_real_distribution<double> ur(150.0, 390.0);
         std::default_random_engine gen;
-                std::cout << "========= slope 90s =======" << std::endl;
+
         SUBCASE("June") {
-            std::cout << "========= June step ========" << std::endl;
+
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -669,16 +728,19 @@ TEST_SUITE("radiation") {
             rastep+=r.ra;
             rsostep+=r.sw_radiation;
             }
-
+            if (verbose){
+            std::cout << "========= slope 90s =======" << std::endl;
+            std::cout << "========= June step ========" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(110.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(100.0).epsilon(0.05));
 
 
         }
         SUBCASE("January") {
-            std::cout << "========= January =======" << std::endl;
+
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -688,13 +750,16 @@ TEST_SUITE("radiation") {
             rastep+=r.ra;
             rsostep+=r.sw_radiation;
             }
+            if (verbose){
+            std::cout << "========= January =======" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(390.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(180.0).epsilon(0.05));
         }
         SUBCASE("December") {
-            std::cout << "========= December =======" << std::endl;
+
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -704,8 +769,11 @@ TEST_SUITE("radiation") {
             rastep+=r.ra;
             rsostep+=r.sw_radiation;
             }
+            if (verbose){
+            std::cout << "========= December =======" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(390.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(180.0).epsilon(0.05));
         }
@@ -726,9 +794,9 @@ TEST_SUITE("radiation") {
         utctime ta1,ta2;
         std::uniform_real_distribution<double> ur(150.0, 390.0);
         std::default_random_engine gen;
-        std::cout << "========= slope 90n =======" << std::endl;
+
         SUBCASE("June") {
-            std::cout << "========= June step ========" << std::endl;
+
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -738,16 +806,19 @@ TEST_SUITE("radiation") {
                 rastep+=r.ra;
                 rsostep+=r.sw_radiation;
             }
-
+            if (verbose){
+            std::cout << "========= slope 90n =======" << std::endl;
+            std::cout << "========= June step ========" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(110.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(50.0).epsilon(0.05));
 
 
         }
         SUBCASE("January") {
-            std::cout << "========= January =======" << std::endl;
+
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -757,13 +828,16 @@ TEST_SUITE("radiation") {
                 rastep+=r.ra;
                 rsostep+=r.sw_radiation;
             }
+            if (verbose){
+            std::cout << "========= January =======" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(0.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(5.0).epsilon(0.05));
         }
         SUBCASE("December") {
-            std::cout << "========= December =======" << std::endl;
+
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
@@ -773,8 +847,11 @@ TEST_SUITE("radiation") {
                 rastep+=r.ra;
                 rsostep+=r.sw_radiation;
             }
+            if (verbose){
+            std::cout << "========= December =======" << std::endl;
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
+            }
             FAST_CHECK_EQ(rastep, doctest::Approx(0.0).epsilon(0.05));
             FAST_CHECK_EQ(rsostep, doctest::Approx(5.0).epsilon(0.05));
         }

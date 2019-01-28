@@ -149,6 +149,9 @@ namespace shyft {
                 double f1_, f2_,f3_,f4_,f5_;
                 double omega1_24_, omega2_24_, omega1_24b_, omega2_24b_; //integration limits, actual periods of sun
                 double fb_;
+                double fcd_=0.05;
+                double sin_beta_;
+                double step_=1;
 
                 /** \brief computes necessary geometric parameters
                  * \param omega, [rad] -- hour angle
@@ -381,13 +384,13 @@ namespace shyft {
                     W = 0.14 * ea * eatm + 2.1; // eq.(18)
 
                     double Kbo;
-                    double sin_beta, sin_betahor;
+                    double sin_betahor;
                     sin_betahor = std::max(0.01,costthor_); // eq.(20) equal to (4), cos_tthor = sin_betahor /// TODO: check if cos_tt = sin_beta is true for inclined surface
-                    sin_beta = std::max(0.01,costt_);
+                    sin_beta_ = std::max(0.01,costt_);
                     // clearness index for direct beam radiation
 
-                    Kbo = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm / param.turbidity / sin_beta -
-                                                        0.075 * pow((W / sin_beta), 0.4)))); // eq.(17)
+                    Kbo = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm / param.turbidity / sin_beta_ -
+                                                        0.075 * pow((W / sin_beta_), 0.4)))); // eq.(17)
                     double Kbohor = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm / param.turbidity / sin_betahor -
                                                                   0.075 * pow((W / sin_betahor), 0.4)))); // eq.(17)
 
@@ -465,6 +468,7 @@ namespace shyft {
                     doy_ = utc.day_of_year(t1);
                     double lt1 = utc.calendar_units(t1).hour + utc.calendar_units(t1).minute / 60.0;
                     double lt2 = utc.calendar_units(t2).hour + utc.calendar_units(t2).minute / 60.0;
+                    step_ = lt2-lt1;
                     delta_ = compute_earth_declination(doy_);
                     double omega1 = hour_angle(lt1); // earth hour angle
                     double omega2 = hour_angle(lt2); // earth hour angle
@@ -477,14 +481,14 @@ namespace shyft {
 
 
                     compute_abc(delta_,phi_,0.0,0.0);
-                    rahor_ = compute_ra(lt2-lt1,delta_,phi_,0.0,0.0,omega1,omega2,doy_); // this function also updates omega1_, omega2_
+                    rahor_ = compute_ra(step_,delta_,phi_,0.0,0.0,omega1,omega2,doy_); // this function also updates omega1_, omega2_
                     compute_fs(omega1_,omega2_);
                     double sin_betahor = std::min(1.0,std::max(0.01,compute_beta_step())); // eq.(22),
 
                     compute_abc(delta_,phi_,slope_,aspect_);
-                    ra_ = compute_ra(lt2-lt1,delta_,phi_,slope_,aspect_,omega1,omega2,doy_);
+                    ra_ = compute_ra(step_,delta_,phi_,slope_,aspect_,omega1,omega2,doy_);
                     compute_fs(omega1_,omega2_);
-                    double sin_beta = std::min(1.0,std::max(0.01,compute_beta_step())); // eq.(22),
+                    sin_beta_ = std::min(1.0,std::max(0.01,compute_beta_step())); // eq.(22),
 
 
                     double W; //equivalent depth of precipitable water in the atmosphere[mm]
@@ -492,8 +496,8 @@ namespace shyft {
                     double ea = actual_vp(temperature, rhumidity); //[kPa] actual vapor pressure
                     W = 0.14 * ea * eatm + 2.1; // eq.(18)
 
-                    double Kbo = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm / param.turbidity / sin_beta -
-                                                                  0.075 * pow((W / sin_beta), 0.4)))); // eq.(17)
+                    double Kbo = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm / param.turbidity / sin_beta_ -
+                                                                  0.075 * pow((W / sin_beta_), 0.4)))); // eq.(17)
                     double Kbohor = std::min(1.0, std::max(-0.4, 0.98 * exp(-0.00146 * eatm / param.turbidity / sin_betahor -
                                                                             0.075 * pow((W / sin_betahor), 0.4)))); // eq.(17)
 
@@ -512,7 +516,6 @@ namespace shyft {
                     // fb_ = min(5.0,Kbo/Kbohor*ra_/(rahor_>0.0?rahor_:max(0.00001,ra_)));//eq.(34)
                     fb_ = ra_ / (rahor_ > 0.0 ? rahor_ : std::max(0.00001, ra_));//eq.(34)
                     double fia_ = fia(Kbohor, Kdohor); //eq.(33)
-
                     double dir_radiation = Kbo * ra_;
 //                    std::cout<<"Kbo: "<<Kbo<<std::endl;
 //                    std::cout<<"dir: "<<dir_radiation<<std::endl;
@@ -550,9 +553,15 @@ namespace shyft {
                     }
                     else { KBhor = 0.016 * tauswhor; }
                     double KDhor = tauswhor - KBhor;
+                    if (asin(sin_beta_)>0.3){
+                        fcd_ = 1.35*(rsm/(std::min(1.0,std::max(0.3,tsw_rad>0.0?tsw_rad:0.001)))-0.35);
+                    }
+
+
                     if (rsm>0.0)
                         tsw_rad = rsm * (fb_ * KBhor / tauswhor + fia(KBhor, KDhor) * KDhor / tauswhor +
                                                     param.albedo * (1 - fi()));
+
                     return tsw_rad;
                 }
                 /**\brief translates measured solar radiation from horizontal surfaces to slopes
@@ -581,6 +590,11 @@ namespace shyft {
                     }
                     else { KBhor = 0.016 * tauswhor; }
                     double KDhor = tauswhor - KBhor;
+
+                    if (asin(sin_beta_)>0.3){
+                        fcd_ = 1.35*(rsm/(std::min(1.0,std::max(0.3,tsw_rad>0.0?tsw_rad:0.001)))-0.35);
+                    }
+
                     if (rsm>0.0)
                         tsw_rad = rsm * (fb_ * KBhor / tauswhor + fia(KBhor, KDhor) * KDhor / tauswhor +
                                          param.albedo * (1 - fi()));
@@ -590,7 +604,6 @@ namespace shyft {
                  * ref.: Lawrence Dingman Physical Hydrology, Third Edition, 2015, p.261
                  * \param temperature, [degC] -- air temperature
                  * \param rhumidity, [persent] -- relative humidity
-                 * \param ss_temp, [K] -- surface temperature
                  * response.lw_radiation W/m^2 */
                 /// TODO https://www.hydrol-earth-syst-sci.net/17/1331/2013/hess-17-1331-2013-supplement.pdf
                 // TODO discuss the option to have different formulations here.
@@ -600,6 +613,18 @@ namespace shyft {
                     double epsilon_ss = 0.95;//water TODO: as parameter
                     double Lout = epsilon_ss*sigma*pow(ss_temp,4)+(1-epsilon_ss)*Lin;
                     return (Lin-Lout)*MJm2d2Wm2;
+                }
+                /**\brief clear-sky longwave raditiation
+                 * ref.: ASCE-EWRI p.165
+                 * \param temperature, [degC] -- air temperature
+                 * \param rhumidity, [persent] -- relative humidity
+                 * \param rs,  -- measured or calculated solar radiation
+                 * \param rso --calculated clear-sky radiation
+                 * response.lw_radiation W/m^2 */
+                double lw_radiation_asce_ewri(double temperature, double rhumidity,double fcd){
+                    double sigma_asce = 2.042*pow(10,-10);
+                    double netlw  = sigma_asce*fcd*(0.34-0.14*sqrt(actual_vp(temperature,rhumidity)))*pow(temperature+273.15,4);
+                    return netlw*MJm2h2Wm2;
                 }
             };
 
