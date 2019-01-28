@@ -68,6 +68,7 @@ namespace expose {
 	static string nice_str(const shared_ptr<time_series::dd::periodic_ts>&b) { return "periodic_ts("+nice_str(b->ts.ta) + ")"; }
 	static string nice_str(const shared_ptr<time_series::dd::convolve_w_ts>&b) { return "convolve_w_ts(" + nice_str(b->ts_impl.ts) + ",..)"; }
 	static string nice_str(const shared_ptr<time_series::dd::extend_ts>&b) { return "extend_ts(" + nice_str(b->lhs)+","+nice_str(b->rhs)+",..)"; }
+	static string nice_str(const shared_ptr<time_series::dd::use_time_axis_from_ts>&b) { return "(" + nice_str(b->lhs)+".use_time_axis_from("+nice_str(b->rhs)+",..))"; }
     static string nice_str(const shared_ptr<time_series::dd::rating_curve_ts>&b) { return "rating_curve_ts(" + nice_str(b->ts.level_ts) + ",..)"; }
     static string nice_str(const shared_ptr<time_series::dd::ice_packing_ts>&b) { return "ice_packing_ts(" + nice_str(b->ts.temp_ts) + ",..)"; }
     static string nice_str(const shared_ptr<time_series::dd::ice_packing_recession_ts>&b) { return "ice_packing_recession_ts(" + nice_str(b->flow_ts) + "," + nice_str(b->ice_packing_ts) + ",..)"; }
@@ -100,7 +101,7 @@ namespace expose {
 		if (const auto& b = dynamic_pointer_cast<time_series::dd::qac_ts>(ats.ts)) return nice_str(b);
         if (const auto& b = dynamic_pointer_cast<time_series::dd::inside_ts>(ats.ts)) return nice_str(b);
         if (const auto& b = dynamic_pointer_cast<time_series::dd::decode_ts>(ats.ts)) return nice_str(b);
-
+        if (const auto& b = dynamic_pointer_cast<time_series::dd::use_time_axis_from_ts>(ats.ts)) return nice_str(b);
 		return "not_yet_stringified_ts";
 	}
     static string ts_stringify(const apoint_ts&ats) { return nice_str(ats); }
@@ -258,6 +259,14 @@ namespace expose {
                 doc_parameter("delta_t","int","number of seconds to time-shift, positive values moves forward")
 				doc_returns("tsv","TsVector",	"a new time-series, that appears as time-shifted version of self")
 			)
+            .def("use_time_axis_from",&ats_vector::use_time_axis_from,(py::arg("self"),py::arg("other")),
+                doc_intro("Create a new ts-vector applying .use_time_axis_from on each member")
+                doc_see_also("TimeSeries.use_time_axis_from")
+                doc_intro("")
+				doc_parameters()
+                doc_parameter("other","TimeSeries","time-series that provides the wanted time-axis")
+				doc_returns("tsv","TsVector",	"time-series vector, where each element have time-axis from other")
+			) 
             .def("extend_ts", &ats_vector::extend_ts, (py::arg("ts"), py::arg("split_policy") = extend_ts_split_policy::EPS_LHS_LAST, py::arg("fill_policy") = extend_ts_fill_policy::EPF_NAN, py::arg("split_at") = utctime(seconds(0)), py::arg("fill_value") = shyft::nan),
                 doc_intro("create a new ats_vector where all time-series are extended by ts")
                 doc_parameters()
@@ -603,7 +612,7 @@ namespace expose {
 
     static void expose_apoint_ts() {
         using namespace shyft::api;
-
+        using shyft::time_series::dd::qac_parameter;
         typedef apoint_ts pts_t;
         typedef pts_t (pts_t::*self_dbl_t)(double) const;
         typedef pts_t (pts_t::*self_ts_t)(const pts_t &)const;
@@ -842,6 +851,18 @@ namespace expose {
                 doc_parameter("delta_t","int","number of seconds to time-shift, positive values moves forward")
 				doc_returns("ts","TimeSeries",	"a new time-series, that appears as time-shifted version of self")
 			)
+            .def("use_time_axis_from",&apoint_ts::use_time_axis_from,(py::arg("self"),py::arg("other")),
+                doc_intro("Create a new ts that have the same values as self, but filtered to the time-axis points from")
+                doc_intro("from the other supplied time-series.")
+                doc_intro("This function migth be useful for making new time-series, that exactly matches")
+                doc_intro("the time-axis of another series.")
+                doc_intro("Values of the resulting time-series is like like: ")
+                doc_intro(" [self(t) for t in other.time_axis.time_points[:-1]")
+                doc_intro("")
+				doc_parameters()
+                doc_parameter("other","TimeSeries","time-series that provides the wanted time-axis")
+				doc_returns("ts","TimeSeries",	"a new time-series, that appears as time-shifted version of self")
+			) 
             .def("convolve_w", &apoint_ts::convolve_w, (py::arg("self"),py::arg("weights"), py::arg("policy")),
                 doc_intro("create a new ts that is the convolved ts with the given weights list")
                 doc_parameters()
@@ -1231,6 +1252,23 @@ namespace expose {
                  doc_parameter("cts","TimeSeries","time-series that keeps the values to be filled in at points that are NaN or outside min-max-limits")
                  doc_returns("min_max_check_ts_fill","TimeSeries","Evaluated on demand time-series with NaN, out of range values filled in")
             )
+            .def("quality_and_self_correction",&apoint_ts::quality_and_self_correction,
+                 (py::arg("self"),py::arg("parameters")),
+                 doc_intro("returns a new time-series that applies quality checks accoring to parameters")
+                 doc_intro("and fills in values according to rules specified in parameters.")
+                 doc_parameters()
+                 doc_parameter("parameter","QacParameter","Parameter with rules for quality and corrections")
+                 doc_returns("ts","TimeSeries","a new time-series where the values are subject to quality and correction as specified")
+             )
+            .def("quality_and_ts_correction",&apoint_ts::quality_and_ts_correction,
+                 (py::arg("self"),py::arg("parameters"),py::arg("cts")),
+                 doc_intro("returns a new time-series that applies quality checks accoring to parameters")
+                 doc_intro("and fills in values from the cts, according to rules specified in parameters.")
+                 doc_parameters()
+                 doc_parameter("parameter","QacParameter","Parameter with rules for quality and corrections")
+                 doc_parameter("cts","TimeSeries","is used to fill in correct values, as f(t) for values that fails quality-checks")
+                 doc_returns("ts","TimeSeries","a new time-series where the values are subject to quality and correction as specified")
+             )
             .def("inside", &apoint_ts::inside,
                 (py::arg("self"),py::arg("min_v"),py::arg("max_v"),py::arg("nan_v")=shyft::nan,py::arg("inside_v")=1.0,py::arg("outside_v")=0.0),
                 doc_intro(
@@ -1399,6 +1437,29 @@ namespace expose {
 				.def("size", &AverageAccessorTs::size, (py::arg("self")),"returns number of intervals in the time-axis for this accessor")
 				;
 		}
+		class_<qac_parameter>(
+            "QacParameter",
+            doc_intro("The qac parameter controls how quailty checks are done, providing min-max range, plus repeated values checks")
+            doc_intro("It also provides parameters that controls how the replacement/correction values are filled in,")
+            doc_intro("like maximum time-span between two valid neighbour points that allows for linear/extension filling")
+            )
+            .def(init<utctimespan,double,double,utctimespan,double,double>((py::arg("self"),py::arg("max_timespan"),py::arg("min_x"),py::arg("max_x"),
+                                                                            py::arg("repeat_timespan"),py::arg("repeat_tolerance"),py::arg("constant_filler")=shyft::nan),
+                                                                           doc_intro("a quite complete qac, only lacks repeat_allowed value(s)"))
+            )
+            .def(init<utctimespan,double,double,utctimespan,double,double,double>((py::arg("self"),py::arg("max_timespan"),py::arg("min_x"),py::arg("max_x"),
+                                                                            py::arg("repeat_timespan"),py::arg("repeat_tolerance"),py::arg("repeat_allowed"),py::arg("constant_filler")=shyft::nan),
+                                                                           doc_intro("a quite complete qac, including one repeat_allowed value"))
+            )
+            .def_readwrite("min_v",&qac_parameter::min_x,"minimum value or nan for no minimum value limit")
+            .def_readwrite("max_v",&qac_parameter::max_x,"maximum value or nan for no maximum value limit")
+            .def_readwrite("max_timespan",&qac_parameter::max_timespan,"maximum timespan between two ok values that allow interpolation, or extension of values.If zero, no linear/extend correction")
+            .def_readwrite("repeat_timespan",&qac_parameter::repeat_timespan,"maximum timespan the same value can be repeated (within repeat_tolerance).If zero, no repeat validation done")
+            .def_readwrite("repeat_tolerance",&qac_parameter::repeat_tolerance,"values are considered repeated if they differ by less than repeat_tolerance")
+            .def_readwrite("repeat_allowed",&qac_parameter::repeat_allowed,"values that are allowed to repeat, within repeat-tolerance")
+            .def_readwrite("constant_filler",&qac_parameter::constant_filler,"this is applied to values that fails quality checks, if no correction ts, and no interpolation/extension is active")
+            ;
+        
     }
 
     /** python api need some helper classes to make this more elegant */

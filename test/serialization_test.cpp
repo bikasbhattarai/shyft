@@ -198,6 +198,10 @@ TEST_CASE("test_serialization") {
     auto aexpr2 = serialize_loop(aexpr);
     TS_ASSERT(is_equal(aexpr,aexpr2));
 
+    auto a_use_ta= agts.use_time_axis_from(apoint_ts(tag,1.0));
+    auto a_use_ta2= serialize_loop(a_use_ta);
+    TS_ASSERT(is_equal(a_use_ta,a_use_ta2));
+    
 
     // verify vector stuff.
     vector<apoint_ts> tsv;
@@ -632,5 +636,24 @@ TEST_CASE("test_tuple_serialization") {
 	FAST_CHECK_EQ(std::get<0>(xtra.ts_reps).size(), std::get<0>(xtra2.ts_reps).size());
     FAST_CHECK_EQ(std::get<0>(xtra.ts_reps)[0], std::get<0>(xtra2.ts_reps)[0]);
 }
-
+TEST_CASE("qac_param_serialization") {
+	using namespace time_series;
+	using dd::qac_parameter;
+    qac_parameter a;
+    qac_parameter c;
+    FAST_CHECK_UNARY(a.equal(c));
+    // first check we can trust .equal
+    c.min_x=1.3;FAST_CHECK_UNARY_FALSE(a.equal(c));
+    c=qac_parameter{};c.max_x=1.3;FAST_CHECK_UNARY_FALSE(a.equal(c));
+    c=qac_parameter{};c.max_timespan= seconds(3);FAST_CHECK_UNARY_FALSE(a.equal(c));
+    c=qac_parameter{};c.repeat_tolerance=1.0;FAST_CHECK_UNARY_FALSE(a.equal(c));
+    c=qac_parameter{};c.repeat_timespan=seconds(111);FAST_CHECK_UNARY_FALSE(a.equal(c));
+    c=qac_parameter{};c.repeat_allowed=vector<double>{1.0};FAST_CHECK_UNARY_FALSE(a.equal(c));
+    a.repeat_allowed=vector<double>{1.0};FAST_CHECK_UNARY(a.equal(c));
+    a.repeat_allowed=vector<double>{1.2};FAST_CHECK_UNARY_FALSE(a.equal(c));
+    
+    // then do serialize magic and compare
+    auto b=serialize_loop(a);
+    FAST_CHECK_UNARY(a.equal(b));
+}
 } // end TEST_SUITE
