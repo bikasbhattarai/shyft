@@ -540,6 +540,7 @@ void shyft::time_series::dd::qac_parameter::serialize(Archive & ar, const unsign
     & core_nvp("repeat_tolerance",repeat_tolerance)
     & core_nvp("repeat_allowed",repeat_allowed)
     & core_nvp("constant_filler",constant_filler)
+    & core_nvp("repeat_wipe_all",repeat_wipe_all)
     ;
 }
 

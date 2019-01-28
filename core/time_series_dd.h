@@ -1464,6 +1464,7 @@ namespace shyft {
             double         repeat_tolerance{1e-2};///< within this repeat tolerance
             vector<double> repeat_allowed;///< except these values are allowed to repeat
             double         constant_filler{shyft::nan};///< if not nan, use this value to correct not ok values.
+            bool           repeat_wipe_all{false};///< if a repeated sequence, mark entire sequence as bad.
             
             qac_parameter()=default;
             // some useful scripting constructors
@@ -1477,13 +1478,15 @@ namespace shyft {
             qac_parameter(utctimespan max_timespan,double min_x,double max_x,utctimespan repeat_timespan,double repeat_tolerance,double repeat_this,double constant_filler)
             :max_timespan{max_timespan},min_x{min_x},max_x{max_x},repeat_timespan{repeat_timespan},repeat_tolerance{repeat_tolerance},repeat_allowed{repeat_this},constant_filler{constant_filler}
             {}
-            
+            qac_parameter(utctimespan max_timespan,double min_x,double max_x,utctimespan repeat_timespan,double repeat_tolerance,double repeat_this,double constant_filler,bool repeat_wipe_all)
+            :max_timespan{max_timespan},min_x{min_x},max_x{max_x},repeat_timespan{repeat_timespan},repeat_tolerance{repeat_tolerance},repeat_allowed{repeat_this},constant_filler{constant_filler},repeat_wipe_all{repeat_wipe_all}
+            {}
 
 
             bool equal(const qac_parameter& o, double abs_e=1e-9) const {
                 if( max_timespan==o.max_timespan && nan_equal(min_x,o.min_x,abs_e) && nan_equal(max_x,o.max_x,abs_e)
                 && repeat_timespan==o.repeat_timespan && nan_equal(repeat_tolerance,o.repeat_tolerance,abs_e)
-                && nan_equal(constant_filler,o.constant_filler,abs_e)) {
+                && nan_equal(constant_filler,o.constant_filler,abs_e) && repeat_wipe_all== o.repeat_wipe_all) {
                     if(repeat_allowed.size()==o.repeat_allowed.size()) {
                         for(size_t i=0;i<o.repeat_allowed.size();++i) {
                             if (!nan_equal(repeat_allowed[i],o.repeat_allowed[i],abs_e))
@@ -1558,6 +1561,8 @@ namespace shyft {
                 while(--j) { // search backward to the root of repeat
                     double v=ts->value(j);
                     if( !isfinite(v) || ::fabs(v - x) > p.repeat_tolerance ) {
+                        if(p.repeat_wipe_all)
+                            return j;// root starts before first repeated value
                         j=j+1;// root starts here.
                         break;
                     }
