@@ -24,8 +24,8 @@ namespace expose {
             .def_readwrite("net_radiation",&response::net_radiation)
             .def_readwrite("ra",&response::ra)
             .def_readwrite("rah",&response::rah)
-            .def_readwrite("omega1",&response::omega1)
-            .def_readwrite("omega2",&response::omega2)
+            .def_readwrite("sun_rise",&response::sun_rise)
+            .def_readwrite("sun_set",&response::sun_set)
             ;
 
         typedef calculator<parameter,response> RadiationCalculator;
@@ -34,9 +34,10 @@ namespace expose {
                 "primitive implementation for calculating predicted clear-sky short-wave solar radiation for inclined surfaces\n"
                 "This function is plain and simple, taking albedo and turbidity\n"
                 "into the constructor and provides 2 functions:\n"
-                " psw_radiation calculates predicted solar radiation (if no measured data available);\n"
-                " tsw_radiation translates measured horizontal radiation into sloped surface\n"
-                "[mm/s] units.\n",no_init
+                " net_radiation calculates predicted solar radiation (if no measured data available) or translates measured data into the slope plus adds the longwave radiation: instantaneously;\n"
+                " net_radiation_step calculates predicted solar radiation or/and translates measured horizontal radiation into sloped surface \n"
+                " for the time period between tstart and tend plus adds the lw radiation\n"
+                " Recommended usage is the net_radiation_step for 24h-steps; it was also tested with 1h and 3h steps\n",no_init
             )
             .def(init<const parameter&>(args("param"),"create a calculator using supplied parameter"))
             .def("net_radiation",&RadiationCalculator::net_radiation,(py::arg("self"),py::arg("response"), py::arg("latitude"), py::arg("t"), py::arg("slope"), py::arg("aspect"), py::arg("temperature"), py::arg("rhumidity"), py::arg("elevation"),  py::arg("rsm")),

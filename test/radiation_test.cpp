@@ -143,7 +143,7 @@ TEST_SUITE("radiation") {
 
     }
 
-    TEST_CASE("check_solar_radiation_horizontal"){
+    TEST_CASE("check_solar_radiation_horizontal_inst"){
         parameter p;
         response r;
         p.albedo = 0.2;
@@ -151,20 +151,19 @@ TEST_SUITE("radiation") {
         calculator<parameter,response> rad(p);
         calendar utc_cal;
         double lat = 44.0;
-        utctime t,t1,t2;
+        utctime t;
         // checking for horizontal surface Eugene, OR, p.64, fig.1b
-        arma::vec surface_normal({0.0,0.0,1.0});
         double slope = 0.0;
         double aspect = 0.0;
-        utctime ta,ta1,ta2;
+        utctime ta;
         trapezoidal_average av_rahor;
         trapezoidal_average av_ra;
         trapezoidal_average av_rs;
         std::uniform_real_distribution<double> ur(150.0, 390.0);
         std::default_random_engine gen;
-        std::cout << "========= Horizontal =======" << std::endl;
+//        std::cout << "========= Horizontal =======" << std::endl;
         SUBCASE("June_translated") {
-            std::cout << "========= June translated ========" << std::endl;
+//            std::cout << "========= June translated ========" << std::endl;
             ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
             //rad.psw_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope, aspect, 20.0, 50.0, 150.0, ur(gen));
@@ -179,15 +178,15 @@ TEST_SUITE("radiation") {
                 av_rs.add(r.sw_radiation, h);
             }
 
-            std::cout << "ra: " << av_ra.result() << std::endl;
-            std::cout << "rs: " << av_rs.result() << std::endl;
+//            std::cout << "ra: " << av_ra.result() << std::endl;
+//            std::cout << "rs: " << av_rs.result() << std::endl;
             FAST_CHECK_EQ(av_ra.result(), doctest::Approx(500.0).epsilon(0.05));
             FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
             //FAST_CHECK_EQ(av_rs.result(), doctest::Approx(370.0).epsilon(0.05));
 
         }
         SUBCASE("June") {
-            std::cout << "========= June ========" << std::endl;
+//            std::cout << "========= June ========" << std::endl;
             ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
             //rad.psw_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
             rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
@@ -210,13 +209,531 @@ TEST_SUITE("radiation") {
                     FAST_CHECK_EQ(av_rs.result(), doctest::Approx(370.0).epsilon(0.05));
 
         }
+        SUBCASE("January") {
+            std::cout << "========= January =======" << std::endl;
+            ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // January
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(130.0).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
+        }
+        SUBCASE("December") {
+            std::cout << "========= December =======" << std::endl;
+            ta = utc_cal.time(2002, 12, 21, 00, 00, 0, 0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 12, 21, h, 00, 0, 0); // January
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(130.0).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
+        }
+
+    }
+    TEST_CASE("check_solar_radiation_horizontal_step"){
+    parameter p;
+    response r;
+    p.albedo = 0.2;
+    p.turbidity = 1.0;
+    calculator<parameter,response> rad(p);
+    calendar utc_cal;
+    double lat = 44.0;
+    utctime t1,t2;
+    // checking for horizontal surface Eugene, OR, p.64, fig.1b
+    double slope = 0.0;
+    double aspect = 0.0;
+    utctime ta1,ta2;
+    std::uniform_real_distribution<double> ur(150.0, 390.0);
+    std::default_random_engine gen;
+    //        std::cout << "========= Horizontal =======" << std::endl;
+    SUBCASE("June_translated") {
+        //            std::cout << "========= June translated ========" << std::endl;
+        double rastep = 0.0;
+        double rsostep = 0.0;
+        for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 06, 21, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0,ur(gen));
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+        }
+
+        std::cout << "rastep: " << rastep << std::endl;
+        std::cout << "rsostep: " << rsostep << std::endl;
+
+
+    }
+    SUBCASE("June") {
+        std::cout << "========= June step ========" << std::endl;
+        double rastep = 0.0;
+        double rsostep = 0.0;
+        for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 06, 21, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+        }
+
+        std::cout << "rastep: " << rastep << std::endl;
+        std::cout << "rsostep: " << rsostep << std::endl;
+        FAST_CHECK_EQ(rastep, doctest::Approx(500.0).epsilon(0.05));
+        FAST_CHECK_EQ(rsostep, doctest::Approx(370.0).epsilon(0.05));
+
+
+    }
+    SUBCASE("January") {
+        std::cout << "========= January =======" << std::endl;
+        double rastep = 0.0;
+        double rsostep = 0.0;
+        for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 01, 1, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+        }
+        std::cout << "rastep: " << rastep << std::endl;
+        std::cout << "rsostep: " << rsostep << std::endl;
+        FAST_CHECK_EQ(rastep, doctest::Approx(130.0).epsilon(0.05));
+        FAST_CHECK_EQ(rsostep, doctest::Approx(75.0).epsilon(0.05));
+    }
+    SUBCASE("December") {
+        std::cout << "========= December =======" << std::endl;
+        double rastep = 0.0;
+        double rsostep = 0.0;
+        for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 12, 21, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 12, 21, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+        }
+        std::cout << "rastep: " << rastep << std::endl;
+        std::cout << "rsostep: " << rsostep << std::endl;
+        FAST_CHECK_EQ(rastep, doctest::Approx(130.0).epsilon(0.05));
+        FAST_CHECK_EQ(rsostep, doctest::Approx(75.0).epsilon(0.05));
+    }
+
+}
+
+
+   TEST_CASE("check_solar_radiation_slope_45s"){
+        parameter p;
+        response r;
+        p.albedo = 0.2;
+        p.turbidity = 1.0;
+        calculator<parameter,response> rad(p);
+        calendar utc_cal;
+        double lat = 44.0;
+        utctime t;
+        // checking for horizontal surface Eugene, OR, p.64, fig.1d
+        // 24h  average radiation
+        double slope = 45;//*shyft::core::radiation::pi/180; // 45 S
+       // double proj = sin(slope);
+        double aspect = 0.0;//*shyft::core::radiation::pi/180;// facing south
+        //arma::vec surface_normal({proj*cos(aspect),proj*sin(aspect),cos(slope)});
+        utctime ta;
+        trapezoidal_average av_rahor;
+        trapezoidal_average av_ra;
+        trapezoidal_average av_rs;
+        std::uniform_real_distribution<double> ur(100.0, 390.0);
+        std::default_random_engine gen;
+        std::cout << "========= Slope 45S =======" << std::endl;
+        SUBCASE("June_translated") {
+            std::cout << "========= June translated ========" << std::endl;
+            ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+
+            std::cout << "rahor: " << av_rahor.result() << std::endl;
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
+            std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
+            //FAST_CHECK_EQ(av_rs.result(), doctest::Approx(310.0).epsilon(0.05));
+        }
+        SUBCASE("June") {
+            std::cout << "========= June ========" << std::endl;
+            ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
+//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+
+            std::cout << "rahor: " << av_rahor.result() << std::endl;
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
+            std::cout << "sun_set: " << rad.sun_set() << std::endl;
+                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(310.0).epsilon(0.05));
+        }
+        SUBCASE("January") {
+            std::cout << "========= January ========" << std::endl;
+            ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
+//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+            std::cout << "rahor: " << av_rahor.result() << std::endl;
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
+            std::cout << "sun_set: " << rad.sun_set() << std::endl;
+                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(270.0).epsilon(0.05));
+        }
+        SUBCASE("December") {
+            std::cout << "========= December ========" << std::endl;
+            ta = utc_cal.time(2002, 12, 12, 00, 00, 0, 0);
+//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 12, 12, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+            std::cout << "rahor: " << av_rahor.result() << std::endl;
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
+                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(270.0).epsilon(0.05));
+        }
+
+    }
+    TEST_CASE("check_solar_radiation_45s_step"){
+        parameter p;
+        response r;
+        p.albedo = 0.2;
+        p.turbidity = 1.0;
+        calculator<parameter,response> rad(p);
+        calendar utc_cal;
+        double lat = 44.0;
+        utctime t1,t2;
+        // checking for horizontal surface Eugene, OR, p.64, fig.1b
+        double slope = 45.0;
+        double aspect = 0.0;
+        utctime ta1,ta2;
+        std::uniform_real_distribution<double> ur(150.0, 390.0);
+        std::default_random_engine gen;
+
         SUBCASE("June") {
             std::cout << "========= June step ========" << std::endl;
             double rastep = 0.0;
             double rsostep = 0.0;
             for (int h = 1; h < 24; ++h) {
-                t1 = utc_cal.time(2002, 10, 21, h-1, 00, 0, 0); // June
-                t2 = utc_cal.time(2002, 10, 21, h, 00, 0, 0); // June
+            t1 = utc_cal.time(2002, 06, 21, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+            }
+
+            std::cout << "rastep: " << rastep << std::endl;
+            std::cout << "rsostep: " << rsostep << std::endl;
+            FAST_CHECK_EQ(rastep, doctest::Approx(390.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(310.0).epsilon(0.05));
+
+
+        }
+        SUBCASE("January") {
+            std::cout << "========= January =======" << std::endl;
+            double rastep = 0.0;
+            double rsostep = 0.0;
+            for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 01, 1, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+            }
+            std::cout << "rastep: " << rastep << std::endl;
+            std::cout << "rsostep: " << rsostep << std::endl;
+            FAST_CHECK_EQ(rastep, doctest::Approx(370.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(180.0).epsilon(0.05));
+        }
+        SUBCASE("December") {
+            std::cout << "========= December =======" << std::endl;
+            double rastep = 0.0;
+            double rsostep = 0.0;
+            for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 12, 21, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 12, 21, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+            }
+            std::cout << "rastep: " << rastep << std::endl;
+            std::cout << "rsostep: " << rsostep << std::endl;
+            FAST_CHECK_EQ(rastep, doctest::Approx(370.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(180.0).epsilon(0.05));
+        }
+
+    }
+
+    TEST_CASE("check_solar_radiation_slope_90s"){
+        parameter p;
+        response r;
+        p.albedo = 0.05;
+        p.turbidity = 1.0;
+        calculator<parameter,response> rad(p);
+        calendar utc_cal;
+        double lat = 44.0;
+        utctime t;
+        // checking for horizontal surface Eugene, OR, p.64, fig.1d
+        // 24h  average radiation
+        double slope = 90;//*shyft::core::radiation::pi/180; // 45 S
+        // double proj = sin(slope);
+        double aspect = 0.0;//*shyft::core::radiation::pi/180;// facing south
+        //arma::vec surface_normal({proj*cos(aspect),proj*sin(aspect),cos(slope)});
+        utctime ta;
+        trapezoidal_average av_rahor;
+        trapezoidal_average av_ra;
+        trapezoidal_average av_rs;
+        std::uniform_real_distribution<double> ur(100.0, 390.0);
+        std::default_random_engine gen;
+        std::cout << "========= Slope 90S =======" << std::endl;
+        SUBCASE("June_translated") {
+            std::cout << "========= June translated ========" << std::endl;
+            ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+
+            std::cout << "rahor: " << av_rahor.result() << std::endl;
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
+            std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            FAST_CHECK_EQ(av_ra.result(), doctest::Approx(110.0).epsilon(0.05));
+        //FAST_CHECK_EQ(av_rs.result(), doctest::Approx(310.0).epsilon(0.05));
+        }
+        SUBCASE("June") {
+            std::cout << "========= June ========" << std::endl;
+            ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
+            //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+
+            std::cout << "rahor: " << av_rahor.result() << std::endl;
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
+            std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            FAST_CHECK_EQ(av_ra.result(), doctest::Approx(110.0).epsilon(0.05));
+            FAST_CHECK_EQ(av_rs.result(), doctest::Approx(90.0).epsilon(0.05));
+        }
+        SUBCASE("January") {
+            std::cout << "========= January ========" << std::endl;
+            ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
+            //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+            std::cout << "rahor: " << av_rahor.result() << std::endl;
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
+            std::cout << "sun_set: " << rad.sun_set() << std::endl;
+            FAST_CHECK_EQ(av_ra.result(), doctest::Approx(410.0).epsilon(0.05));
+            FAST_CHECK_EQ(av_rs.result(), doctest::Approx(300.0).epsilon(0.05));
+        }
+        SUBCASE("December") {
+            std::cout << "========= December ========" << std::endl;
+            ta = utc_cal.time(2002, 12, 12, 00, 00, 0, 0);
+            //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
+            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
+            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
+            av_ra.initialize(rad.ra_radiation(), 0.0);
+            av_rs.initialize(r.sw_radiation, 0.0);
+            for (int h = 1; h < 24; ++h) {
+                t = utc_cal.time(2002, 12, 12, h, 00, 0, 0); // June
+                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
+                av_rahor.add(rad.ra_radiation_hor(), h);
+                av_ra.add(rad.ra_radiation(), h);
+                av_rs.add(r.sw_radiation, h);
+            }
+            std::cout << "rahor: " << av_rahor.result() << std::endl;
+            std::cout << "ra: " << av_ra.result() << std::endl;
+            std::cout << "rs: " << av_rs.result() << std::endl;
+            FAST_CHECK_EQ(av_ra.result(), doctest::Approx(410.0).epsilon(0.05));
+            FAST_CHECK_EQ(av_rs.result(), doctest::Approx(300.0).epsilon(0.05));
+        }
+
+    }
+
+    TEST_CASE("check_solar_radiation_90s_step"){
+        parameter p;
+        response r;
+        p.albedo = 0.05;
+        p.turbidity = 1.0;
+        calculator<parameter,response> rad(p);
+        calendar utc_cal;
+        double lat = 44.0;
+        utctime t1,t2;
+        // checking for horizontal surface Eugene, OR, p.64, fig.1b
+        double slope = 90.0;
+        double aspect = 0.0;
+        utctime ta1,ta2;
+        std::uniform_real_distribution<double> ur(150.0, 390.0);
+        std::default_random_engine gen;
+                std::cout << "========= slope 90s =======" << std::endl;
+        SUBCASE("June") {
+            std::cout << "========= June step ========" << std::endl;
+            double rastep = 0.0;
+            double rsostep = 0.0;
+            for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 06, 21, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+            }
+
+            std::cout << "rastep: " << rastep << std::endl;
+            std::cout << "rsostep: " << rsostep << std::endl;
+            FAST_CHECK_EQ(rastep, doctest::Approx(110.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(100.0).epsilon(0.05));
+
+
+        }
+        SUBCASE("January") {
+            std::cout << "========= January =======" << std::endl;
+            double rastep = 0.0;
+            double rsostep = 0.0;
+            for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 01, 1, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+            }
+            std::cout << "rastep: " << rastep << std::endl;
+            std::cout << "rsostep: " << rsostep << std::endl;
+            FAST_CHECK_EQ(rastep, doctest::Approx(390.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(180.0).epsilon(0.05));
+        }
+        SUBCASE("December") {
+            std::cout << "========= December =======" << std::endl;
+            double rastep = 0.0;
+            double rsostep = 0.0;
+            for (int h = 1; h < 24; ++h) {
+            t1 = utc_cal.time(2002, 12, 21, h-1, 00, 0, 0); // June
+            t2 = utc_cal.time(2002, 12, 21, h, 00, 0, 0); // June
+            rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+            rastep+=r.ra;
+            rsostep+=r.sw_radiation;
+            }
+            std::cout << "rastep: " << rastep << std::endl;
+            std::cout << "rsostep: " << rsostep << std::endl;
+            FAST_CHECK_EQ(rastep, doctest::Approx(390.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(180.0).epsilon(0.05));
+        }
+
+    }
+    TEST_CASE("check_solar_radiation_90n_step"){
+        parameter p;
+        response r;
+        p.albedo = 0.05;
+        p.turbidity = 1.0;
+        calculator<parameter,response> rad(p);
+        calendar utc_cal;
+        double lat = 44.0;
+        utctime t1,t2;
+        // checking for horizontal surface Eugene, OR, p.64, fig.1b
+        double slope = 90.0;
+        double aspect = 180.0;
+        utctime ta1,ta2;
+        std::uniform_real_distribution<double> ur(150.0, 390.0);
+        std::default_random_engine gen;
+        std::cout << "========= slope 90n =======" << std::endl;
+        SUBCASE("June") {
+            std::cout << "========= June step ========" << std::endl;
+            double rastep = 0.0;
+            double rsostep = 0.0;
+            for (int h = 1; h < 24; ++h) {
+                t1 = utc_cal.time(2002, 06, 21, h-1, 00, 0, 0); // June
+                t2 = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
                 rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
                 rastep+=r.ra;
                 rsostep+=r.sw_radiation;
@@ -224,466 +741,44 @@ TEST_SUITE("radiation") {
 
             std::cout << "rastep: " << rastep << std::endl;
             std::cout << "rsostep: " << rsostep << std::endl;
-            FAST_CHECK_EQ(rastep, doctest::Approx(500.0).epsilon(0.05));
-            FAST_CHECK_EQ(rsostep, doctest::Approx(370.0).epsilon(0.05));
+            FAST_CHECK_EQ(rastep, doctest::Approx(110.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(50.0).epsilon(0.05));
 
 
-}
-//        SUBCASE("January") {
-//            std::cout << "========= January =======" << std::endl;
-//            ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // January
-//                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(130.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
-//        }
-//        SUBCASE("December") {
-//            std::cout << "========= December =======" << std::endl;
-//            ta = utc_cal.time(2002, 12, 21, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(2002, 12, 21, h, 00, 0, 0); // January
-//                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(130.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rahor.result(), doctest::Approx(av_ra.result()).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
-//        }
+        }
+        SUBCASE("January") {
+            std::cout << "========= January =======" << std::endl;
+            double rastep = 0.0;
+            double rsostep = 0.0;
+            for (int h = 1; h < 24; ++h) {
+                t1 = utc_cal.time(2002, 01, 1, h-1, 00, 0, 0); // June
+                t2 = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // June
+                rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+                rastep+=r.ra;
+                rsostep+=r.sw_radiation;
+            }
+            std::cout << "rastep: " << rastep << std::endl;
+            std::cout << "rsostep: " << rsostep << std::endl;
+            FAST_CHECK_EQ(rastep, doctest::Approx(0.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(5.0).epsilon(0.05));
+        }
+        SUBCASE("December") {
+            std::cout << "========= December =======" << std::endl;
+            double rastep = 0.0;
+            double rsostep = 0.0;
+            for (int h = 1; h < 24; ++h) {
+                t1 = utc_cal.time(2002, 12, 21, h-1, 00, 0, 0); // June
+                t2 = utc_cal.time(2002, 12, 21, h, 00, 0, 0); // June
+                rad.net_radiation_step(r, lat, t1,t2, slope, aspect, 20.0, 50.0, 150.0);
+                rastep+=r.ra;
+                rsostep+=r.sw_radiation;
+            }
+            std::cout << "rastep: " << rastep << std::endl;
+            std::cout << "rsostep: " << rsostep << std::endl;
+            FAST_CHECK_EQ(rastep, doctest::Approx(0.0).epsilon(0.05));
+            FAST_CHECK_EQ(rsostep, doctest::Approx(5.0).epsilon(0.05));
+        }
 
     }
-//   TEST_CASE("check_solar_radiation_slope_45s"){
-//        parameter p;
-//        response r;
-//        p.albedo = 0.2;
-//        p.turbidity = 1.0;
-//        calculator<parameter,response> rad(p);
-//        calendar utc_cal;
-//        double lat = 44.0;
-//        utctime t;
-//        // checking for horizontal surface Eugene, OR, p.64, fig.1d
-//        // 24h  average radiation
-//        double slope = 45;//*shyft::core::radiation::pi/180; // 45 S
-//       // double proj = sin(slope);
-//        double aspect = 0.0;//*shyft::core::radiation::pi/180;// facing south
-//        //arma::vec surface_normal({proj*cos(aspect),proj*sin(aspect),cos(slope)});
-//        utctime ta;
-//        trapezoidal_average av_rahor;
-//        trapezoidal_average av_ra;
-//        trapezoidal_average av_rs;
-//        std::uniform_real_distribution<double> ur(100.0, 390.0);
-//        std::default_random_engine gen;
-//        std::cout << "========= Slope 45S =======" << std::endl;
-//        SUBCASE("June_translated") {
-//            std::cout << "========= June translated ========" << std::endl;
-//            ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
 //
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
-//            std::cout << "sun_set: " << rad.sun_set() << std::endl;
-//            FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
-//            //FAST_CHECK_EQ(av_rs.result(), doctest::Approx(310.0).epsilon(0.05));
-//        }
-//        SUBCASE("June") {
-//            std::cout << "========= June ========" << std::endl;
-//            ta = utc_cal.time(2002, 06, 21, 00, 00, 0, 0);
-////            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(2002, 06, 21, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
-//            std::cout << "sun_set: " << rad.sun_set() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(270.0).epsilon(0.05));
-//        }
-//        SUBCASE("January") {
-//            std::cout << "========= January ========" << std::endl;
-//            ta = utc_cal.time(2002, 01, 1, 00, 00, 0, 0);
-////            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(2002, 01, 1, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//            std::cout << "sun_rise: " << rad.sun_rise() << std::endl;
-//            std::cout << "sun_set: " << rad.sun_set() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(200.0).epsilon(0.05));
-//        }
-//        SUBCASE("December") {
-//            std::cout << "========= December ========" << std::endl;
-//            ta = utc_cal.time(2002, 12, 12, 00, 00, 0, 0);
-////            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(2002, 12, 12, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(200.0).epsilon(0.05));
-//        }
-//        SUBCASE("February") {
-//            std::cout << "========= February ========" << std::endl;
-//            ta = utc_cal.time(2002, 02, 1, 00, 00, 0, 0);
-//            //            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            rad.net_radiation(r, lat, ta, slope,aspect, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(2002, 02, 12, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, slope,aspect, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//            FAST_CHECK_EQ(av_ra.result(), doctest::Approx(390.0).epsilon(0.05));
-//            FAST_CHECK_EQ(av_rs.result(), doctest::Approx(200.0).epsilon(0.05));
-//        }
-//
-//    }
-//    TEST_CASE("check_solar_radiation_slope_90S"){
-//        parameter p;
-//        response r;
-//        p.albedo = 0.05;
-//        p.turbidity = 1.0;
-//        calculator<parameter,response> rad(p);
-//        calendar utc_cal;
-//        double lat = 44.0;
-//        utctime t;
-//        // checking for horizontal surface Eugene, OR, p.64, fig.1e
-//        double slope = 90*shyft::core::radiation::pi/180; // 90 S
-//        double proj = sin(slope);
-//        double aspect = 0.0;// facing south
-//        arma::vec surface_normal({proj*cos(aspect),proj*sin(aspect),cos(slope)});
-//
-//        utctime ta;
-//        trapezoidal_average av_rahor;
-//        trapezoidal_average av_ra;
-//        trapezoidal_average av_rs;
-//        std::uniform_real_distribution<double> ur(0.0, 100.0);
-//        std::default_random_engine gen;
-//        std::cout << "========= Slope 90S =======" << std::endl;
-//        SUBCASE("June") {
-//            std::cout << "========= June ========" << std::endl;
-//            ta = utc_cal.time(1970, 06, 21, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(1970, 06, 21, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(110.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(80.0).epsilon(0.05));
-//        }
-//        SUBCASE("January") {
-//            std::uniform_real_distribution<double> ur_jan90s(0.0, 210.0);
-//            std::cout << "========= January ========" << std::endl;
-//            ta = utc_cal.time(1970, 01, 1, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(1970, 01, 1, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(410.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(205.0).epsilon(0.05));
-//        }
-//        SUBCASE("December") {
-//            std::uniform_real_distribution<double> ur_dec90s(0.0, 250.0);
-//            std::cout << "========= December ========" << std::endl;
-//            ta = utc_cal.time(1970, 12, 12, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(1970, 12, 12, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(410.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(210.0).epsilon(0.05));
-//        }
-//
-//    }
-//    TEST_CASE("check_solar_radiation_slope_90N"){
-//        parameter p;
-//        response r;
-//        p.albedo = 0.05;
-//        p.turbidity = 1.0;
-//        calculator<parameter,response> rad(p);
-//        calendar utc_cal;
-//        double lat = 44.0;
-//        utctime t;
-//        // checking for horizontal surface Eugene, OR, p.64, fig.1f
-//        double slope = 90*shyft::core::radiation::pi/180; // 90 N
-//        double proj = sin(slope);
-//        double aspect = 180*shyft::core::radiation::pi/180;// facing north
-//        arma::vec surface_normal({proj*cos(aspect),proj*sin(aspect),cos(slope)});
-//        double ra_sum = 0.0;
-//        double rso_sum = 0.0;
-//        double rahor_sum = 0.0;
-//        utctime ta;
-//        trapezoidal_average av_rahor;
-//        trapezoidal_average av_ra;
-//        trapezoidal_average av_rs;
-//        std::uniform_real_distribution<double> ur(50.0, 90.0);
-//        std::default_random_engine gen;
-//        std::cout << "========= Slope 90N =======" << std::endl;
-//        SUBCASE("June") {
-//            std::cout << "========= June ========" << std::endl;
-//            ta = utc_cal.time(1970, 06, 21, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(1970, 06, 21, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(105.0).epsilon(0.05));
-//                    // FAST_CHECK_EQ(av_rs.result(), doctest::Approx(50.0).epsilon(0.05));  // TODO: can't get thisvalue right, it is on the top of the predicted, not the bottom
-//        }
-//        SUBCASE("January") {
-//            std::uniform_real_distribution<double> ur_jan90n(5.0, 22.0);
-//            std::cout << "========= January ========" << std::endl;
-//            ta = utc_cal.time(1970, 01, 1, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(1970, 01, 1, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(0.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(14.0).epsilon(0.05));
-//        }
-//        SUBCASE("December") {
-//            std::uniform_real_distribution<double> ur_dec90n(0.0, 20.0);
-//            std::cout << "========= December ========" << std::endl;
-//            ta = utc_cal.time(1970, 12, 12, 00, 00, 0, 0);
-//            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, 150.0);
-//            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-//            av_ra.initialize(rad.ra_radiation(), 0.0);
-//            av_rs.initialize(r.sw_radiation, 0.0);
-//            for (int h = 1; h < 24; ++h) {
-//                t = utc_cal.time(1970, 12, 12, h, 00, 0, 0); // June
-//                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, 150.0);
-//                av_rahor.add(rad.ra_radiation_hor(), h);
-//                av_ra.add(rad.ra_radiation(), h);
-//                av_rs.add(r.sw_radiation, h);
-//            }
-//            std::cout << "rahor: " << av_rahor.result() << std::endl;
-//            std::cout << "ra: " << av_ra.result() << std::endl;
-//            std::cout << "rs: " << av_rs.result() << std::endl;
-//                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(0.0).epsilon(0.05));
-//                    FAST_CHECK_EQ(av_rs.result(), doctest::Approx(14.0).epsilon(0.05));
-//        }
-//
-//    }
-    /*TEST_CASE("check_solar_radiation_slope_90N_golden"){
-        parameter p;
-        response res;
-        p.albedo = 0.05;
-        p.turbidity = 1.0;
-        calculator<parameter,response> r(p);
-        calendar utc_cal;
-        double lat = 39.74;
-        double elevation = 1829;
-        double temperature = 0.0;
-        double rhumidity = 50.0;
-        utctime t;
-        // checking for horizontal surface Eugene, OR, p.64, fig.1f
-        double slope = 90*shyft::core::radiation::pi/180; // 90 N
-        double proj = sin(slope);
-        double aspect = 180*shyft::core::radiation::pi/180;// facing north
-        arma::vec surface_normal({proj*cos(aspect),proj*sin(aspect),cos(slope)});
-        double ra_sum = 0.0;
-        double rso_sum = 0.0;
-        double rahor_sum = 0.0;
-        utctime ta;
-        trapezoidal_average av_rahor;
-        trapezoidal_average av_ra;
-        trapezoidal_average av_rso;
-        trapezoidal_average av_rs;
-        std::uniform_real_distribution<double> ur(10.0, 100.0);
-        std::default_random_engine gen;
-        std::cout << "========= Slope 90N golden =======" << std::endl;
-                SUBCASE("June") {
-            std::cout << "========= June ========" << std::endl;
-            ta = utc_cal.time(1970, 06, 21, 00, 00, 0, 0);
-            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, elevation, ur(gen));
-            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-            av_ra.initialize(rad.ra_radiation(), 0.0);
-            av_rso.initialize(r.sw_radiation, 0.0);
-            av_rs.initialize(r.sw_radiation, 0.0);
-            for (int h = 1; h < 24; ++h) {
-                t = utc_cal.time(1970, 06, 21, h, 00, 0, 0); // June
-                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, elevation, ur(gen));
-                av_rahor.add(rad.ra_radiation_hor(), h);
-                av_ra.add(rad.ra_radiation(), h);
-                av_rso.add(r.sw_radiation, h);
-                av_rs.add(r.sw_radiation, h);
-            }
-            std::cout << "rahor: " << av_rahor.result() << std::endl;
-            std::cout << "ra: " << av_ra.result() << std::endl;
-            std::cout << "rso: " << av_rso.result() << std::endl;
-            std::cout << "rs: " << av_rs.result() << std::endl;
-                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(100.0).epsilon(0.05));
-                    FAST_CHECK_EQ(av_rso.result(), doctest::Approx(90.0).epsilon(0.05));
-        }
-                SUBCASE("January") {
-            std::cout << "========= January ========" << std::endl;
-            ta = utc_cal.time(1970, 01, 1, 00, 00, 0, 0);
-            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, elevation, ur(gen));
-            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-            av_ra.initialize(rad.ra_radiation(), 0.0);
-            av_rso.initialize(r.sw_radiation, 0.0);
-            av_rs.initialize(r.sw_radiation, 0.0);
-            for (int h = 1; h < 24; ++h) {
-                t = utc_cal.time(1970, 01, 1, h, 00, 0, 0); // June
-                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, elevation, ur(gen));
-                av_rahor.add(rad.ra_radiation_hor(), h);
-                av_ra.add(rad.ra_radiation(), h);
-                av_rso.add(r.sw_radiation, h);
-                av_rs.add(r.sw_radiation, h);
-            }
-            std::cout << "rahor: " << av_rahor.result() << std::endl;
-            std::cout << "ra: " << av_ra.result() << std::endl;
-            std::cout << "rso: " << av_rso.result() << std::endl;
-            std::cout << "rs: " << av_rs.result() << std::endl;
-                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(0.0).epsilon(0.05));
-                    FAST_CHECK_EQ(av_rso.result(), doctest::Approx(19.0).epsilon(0.05));
-        }
-                SUBCASE("December") {
-            std::cout << "========= December ========" << std::endl;
-            ta = utc_cal.time(1970, 12, 12, 00, 00, 0, 0);
-            rad.net_radiation(r, lat, ta, surface_normal, 20.0, 50.0, elevation, ur(gen));
-            av_rahor.initialize(rad.ra_radiation_hor(), 0.0);
-            av_ra.initialize(rad.ra_radiation(), 0.0);
-            av_rso.initialize(r.sw_radiation, 0.0);
-            av_rs.initialize(r.sw_radiation, 0.0);
-            for (int h = 1; h < 24; ++h) {
-                t = utc_cal.time(1970, 12, 12, h, 00, 0, 0); // June
-                rad.net_radiation(r, lat, t, surface_normal, 20.0, 50.0, elevation, ur(gen));
-                av_rahor.add(rad.ra_radiation_hor(), h);
-                av_ra.add(rad.ra_radiation(), h);
-                av_rso.add(r.sw_radiation, h);
-                av_rs.add(r.sw_radiation, h);
-            }
-            std::cout << "rahor: " << av_rahor.result() << std::endl;
-            std::cout << "ra: " << av_ra.result() << std::endl;
-            std::cout << "rso: " << av_rso.result() << std::endl;
-            std::cout << "rs: " << av_rs.result() << std::endl;
-                    FAST_CHECK_EQ(av_ra.result(), doctest::Approx(0.0).epsilon(0.05));
-                    FAST_CHECK_EQ(av_rso.result(), doctest::Approx(19.0).epsilon(0.05));
-        }
-
-    }*/
-//    TEST_CASE("surface_normal_from_cells") {
-//        vector<cell> cells;
-//        auto r= surface_normal(cells);
-//    }
 }

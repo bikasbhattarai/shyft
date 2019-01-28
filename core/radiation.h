@@ -53,8 +53,8 @@ namespace shyft {
                 double net_radiation = 0.0; // net radiation [W/m^2]
                 double ra = 0.0; // temporary output for extensive testing on python side
                 double rah = 0.0;
-                double omega1 = 0.0;
-                double omega2 = 0.0;
+                double sun_rise = 0.0;
+                double sun_set = 0.0;
             };
 
             template<class P, class R>
@@ -74,7 +74,16 @@ namespace shyft {
 
                 double sun_set() const { return omega2_24_ * rad2deg; }
 
-                /**\brief computes instantaneous net radiation, [W/m2]*/
+                /**\brief computes instantaneous net radiation, [W/m2]
+                 * * ref.: Allen, R. G.; Trezza, R. & Tasumi, M. Analytical integrated functions for daily solar radiation on slopes Agricultural and Forest Meteorology, 2006, 139, 55-73
+                 * \param latitude, [deg]
+                 * \param utctime t,
+                 * \param slope, [deg]
+                 * \param aspect, [deg]
+                 * \param temperature, [degC]
+                 * \param rhumidity, [percent]
+                 * \param elevation, [m]
+                 * \param rsm,[W/m^2] -- measured solar radiation*/
                 void net_radiation(R &response, double latitude, utctime t, double slope=0.0, double aspect = 0.0,
                                     double temperature = 0.0, double rhumidity = 40.0, double elevation = 0.0,
                                     double rsm = 0.0){
@@ -84,70 +93,36 @@ namespace shyft {
                     response.net_radiation = response.sw_radiation+response.lw_radiation;
                     response.ra = ra_radiation();
                     response.rah = ra_radiation_hor();
-                    response.omega1 = sun_rise();
-                    response.omega2 = sun_set();
+                    response.sun_rise = sun_rise();
+                    response.sun_set = sun_set();
 //                    std::cout<<"calendar time: " <<(utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0)<<std::endl;
 
                 }
-                /**\brief computes instantaneous net radiation, [W/m2]*/
+                /**\brief computes net radiation over a period (tested with 1h,3h and 24h time-steps), [W/m2]
+                 * * ref.: Allen, R. G.; Trezza, R. & Tasumi, M. Analytical integrated functions for daily solar radiation on slopes Agricultural and Forest Meteorology, 2006, 139, 55-73
+                 * \param latitude, [deg]
+                 * \param utctime tstart, start of period
+                 * \perem utctime tend, end of period
+                 * \param slope, [deg]
+                 * \param aspect, [deg]
+                 * \param temperature, [degC]
+                 * \param rhumidity, [percent]
+                 * \param elevation, [m]
+                 * \param rsm,[W/m^2] -- measured solar radiation
+                 * */
                 void net_radiation_step(R &response, double latitude, utctime t1, utctime t2, double slope=0.0, double aspect = 0.0,
                                    double temperature = 0.0, double rhumidity = 40.0, double elevation = 0.0,
                                    double rsm = 0.0){
 
-                    response.sw_radiation = psw_radiation_step(latitude, t1,t2, slope, aspect, temperature, rhumidity, elevation);
+                    response.sw_radiation = tsw_radiation_step(latitude, t1,t2, slope, aspect, temperature, rhumidity, elevation,rsm);
                     response.lw_radiation = lw_radiation(temperature, rhumidity);
                     response.net_radiation = response.sw_radiation+response.lw_radiation;
                     response.ra = ra_radiation();
                     response.rah = ra_radiation_hor();
-                    response.omega1 = sun_rise();
-                    response.omega2 = sun_set();
-//                    std::cout<<"calendar time: " <<(utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0)<<std::endl;
-
+                    response.sun_rise = sun_rise();
+                    response.sun_set = sun_set();
                 }
 
-                /**\brief net radiation asce-ewri*/
-                void net_radiation_asce_ewri(R &response, double latitude, utctime t, double slope=0.0, double aspect = 0.0,
-                                             double temperature = 0.0, double rhumidity = 40.0, double elevation = 0.0,
-                                             double rsm = 0.0){
-
-
-                    double phi = latitude;
-                    double longz = 105.0;
-                    double longitudem = 104.78;
-                    double doy = utc.day_of_year(t);
-                    double delta = 0.409*sin(2*pi/365*doy-1.39);
-                    double oms = acos(-tan(phi)*tan(delta));
-                    double b = 2*pi/364*(doy - 81);
-                    double t1 = 1;
-                    double Sc = 0.1645*sin(2*b) - 0.1255*cos(b) - 0.025*sin(b);
-                    double hour = utc.calendar_units(t).hour + utc.calendar_units(t).minute / 60.0;
-                    double om = pi/12.0*((hour+0.06667*(longz-longitudem)+Sc)-12.0);
-                    double om1 = om - pi*t1/24;
-                    double om2 = om + pi*t1/24;
-                    double Gsc = 4.92;
-                    double dr = 1+0.033*cos(2*pi/365*doy);
-                    if (om1 < -oms)
-                        om1 = -oms;
-                    if (om2 <-oms)
-                        om2 = -oms;
-                    if (om1>oms)
-                        om1 = oms;
-                    if (om2>oms)
-                        om2  = oms;
-                    if (om1>om2)
-                        om1 = om2;
-
-                    double ra = 12.0/pi*Gsc*dr*(om2-om1*sin(phi)*sin(delta)+cos(phi)*cos(delta)*(sin(om2)-sin(om1)));
-                    if  ((om<-oms) or (om>oms))
-                        ra = 0.0;
-                    double rso = (0.75+0.00002*elevation)*ra;
-                    double avp = actual_vp(temperature,rhumidity);
-                    double fcd = std::max(0.05,std::min(1.0,1.35*std::max(0.3,std::min(1.0,rsm/rso))-0.35)); // eq.45
-//                    response.sw_radiation = rsm*(1 - param.albedo);
-                    response.sw_radiation = psw_radiation(latitude,t,slope,aspect,temperature,rhumidity,elevation)*0.0036;
-                    response.lw_radiation = 2.042*pow(10,-10)*fcd*(0.34-0.14*sqrt(avp))*pow(temperature+273.16,4);
-                    response.net_radiation = response.sw_radiation-response.lw_radiation;
-                }
 
 
             private:
@@ -278,7 +253,7 @@ namespace shyft {
 
                     // two periods of direct beam radiation (eq.7)
                     if (sin(slope) > sin(phi) * cos(delta) + cos(phi) * sin(delta)) {
-                        std::cout<<"two-strikes"<<std::endl;
+//                        std::cout<<"two-strikes"<<std::endl;
                         double sinA = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
                         double A = asin(sinA);
                         double sinB = std::min(1.0, std::max(-1.0, (a_ * c_ + b_ * std::pow(sqrt_bca, 0.5)) / bbcc));
@@ -539,15 +514,15 @@ namespace shyft {
                     double fia_ = fia(Kbohor, Kdohor); //eq.(33)
 
                     double dir_radiation = Kbo * ra_;
-                    std::cout<<"Kbo: "<<Kbo<<std::endl;
-                    std::cout<<"dir: "<<dir_radiation<<std::endl;
+//                    std::cout<<"Kbo: "<<Kbo<<std::endl;
+//                    std::cout<<"dir: "<<dir_radiation<<std::endl;
                     double dif_radiation = fia_ * Kdo * rahor_;
-                    std::cout<<"Kdo: "<<Kdo<<std::endl;
-                    std::cout<<"fiz: "<<fia_<<std::endl;
-                    std::cout<<"dif: "<<dif_radiation<<std::endl;
+//                    std::cout<<"Kdo: "<<Kdo<<std::endl;
+//                    std::cout<<"fiz: "<<fia_<<std::endl;
+//                    std::cout<<"dif: "<<dif_radiation<<std::endl;
                     double ref_radiation = param.albedo * (1 - fi_) * (Kbo + Kdo) * rahor_;
-                    std::cout<<"fi_: "<<fi_<<std::endl;
-                    std::cout<<"ref: "<<ref_radiation<<std::endl;
+//                    std::cout<<"fi_: "<<fi_<<std::endl;
+//                    std::cout<<"ref: "<<ref_radiation<<std::endl;
                     return dir_radiation + dif_radiation + ref_radiation; // predicted clear sky solar radiation for inclined surface [W/m2]
                 }
                 /**\brief translates measured solar radiation from horizontal surfaces to slopes
@@ -578,6 +553,37 @@ namespace shyft {
                     if (rsm>0.0)
                         tsw_rad = rsm * (fb_ * KBhor / tauswhor + fia(KBhor, KDhor) * KDhor / tauswhor +
                                                     param.albedo * (1 - fi()));
+                    return tsw_rad;
+                }
+                /**\brief translates measured solar radiation from horizontal surfaces to slopes
+                 * ref.: Allen, R. G.; Trezza, R. & Tasumi, M. Analytical integrated functions for daily solar radiation on slopes Agricultural and Forest Meteorology, 2006, 139, 55-73
+                 * \param latitude, [deg]
+                 * \param utctime tstart,
+                 * \param utctime tend,
+                 * \param slope, [deg]
+                 * \param aspect, [deg]
+                 * \param temperature, [degC]
+                 * \param rhumidity, [percent]
+                 * \param elevation, [m]
+                 * \param rsm,[W/m^2] -- measured solar radiation
+                 * \return */
+                double tsw_radiation_step(double latitude, utctime tstart, utctime tend, double slope = 0.0, double aspect = 0.0,
+                                     double temperature = 0.0, double rhumidity = 40.0, double elevation = 0.0,
+                                     double rsm = 0.0) {
+                    // first calculate all predicted values
+                    double tsw_rad = psw_radiation_step(latitude, tstart, tend, slope, aspect, temperature, rhumidity, elevation);
+                    double tauswhor = rsm > 0.0 ? rsm / (rahor_ > 0.0 ? rahor_ : rsm)
+                                                : 1.0; //? not sure if we use a theoretical rahor here
+                    double KBhor;
+                    if (tauswhor >= 0.42) { KBhor = 1.56 * tauswhor - 0.55; }
+                    else if (tauswhor > 0.175 and tauswhor < 0.42) {
+                        KBhor = 0.022 - 0.280 * tauswhor + 0.828 * tauswhor * tauswhor + 0.765 * pow(tauswhor, 3);
+                    }
+                    else { KBhor = 0.016 * tauswhor; }
+                    double KDhor = tauswhor - KBhor;
+                    if (rsm>0.0)
+                        tsw_rad = rsm * (fb_ * KBhor / tauswhor + fia(KBhor, KDhor) * KDhor / tauswhor +
+                                         param.albedo * (1 - fi()));
                     return tsw_rad;
                 }
                 /**\brief clear-sky longwave raditiation
