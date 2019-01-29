@@ -2,7 +2,7 @@
 # See file COPYING for more details **/
 import os
 import time
-from typing import Optional, List, Any, Tuple
+from typing import Optional, List, Any, Tuple, Dict
 from shyft import api
 from netCDF4 import Dataset
 from .time_conversion import convert_netcdf_time
@@ -20,8 +20,8 @@ class WXRepositoryError(Exception):
 
 class WXRepository(GeoTsRepository):
 
-    def __init__(self, epsg, filename, padding=15000., flattened=True, allow_year_shift=True, cache_data=True,
-                 ensemble_member=0):
+    def __init__(self, epsg: int, filename: str, padding: float = 15000., flattened: bool = True,
+                 allow_year_shift: bool = True, cache_data: bool = True, ensemble_member: int = 0):
         """
         Repository for reading ensemble weather scenarios from netcdf file.
 
@@ -75,7 +75,9 @@ class WXRepository(GeoTsRepository):
                                 "radiation": api.RadiationSourceVector,
                                 "wind_speed": api.WindSpeedSourceVector}
 
-    def get_forecast_ensemble(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
+    def get_forecast_ensemble(self, input_source_types: List[str], utc_period: Any, t_c: int,
+                              geo_location_criteria: Optional[Any] = None) -> List[Dict[str, Any]]:
+
         """
         Same as get_timeseries since no time_stamp structure to filename
 
@@ -94,7 +96,8 @@ class WXRepository(GeoTsRepository):
         print("Total time for WXRepository.get_forecast_ensembles: {}".format(elapsed_time))
         return res
 
-    def get_timeseries_ensemble(self, input_source_types, utc_period, geo_location_criteria=None):
+    def get_timeseries_ensemble(self, input_source_types: List[str], utc_period: Any,
+                                geo_location_criteria: Optional[Any] = None) -> List[Dict[str, Any]]:
         """
             Get ensemble of shyft source vectors of time series covering utc_period
             for input_source_types.
@@ -133,7 +136,8 @@ class WXRepository(GeoTsRepository):
                     for src in geo_ts]) for key, geo_ts in ens.items()} for ens in raw_ens]
         return _clip_ensemble_of_geo_timeseries(res, utc_period, WXRepositoryError)
 
-    def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
+    def get_timeseries(self, input_source_types: List[str], utc_period: Any,
+                       geo_location_criteria: Optional[Any] = None) -> Dict[str, Any]:
         """
             Parameters
             ----------
@@ -150,7 +154,8 @@ class WXParallelizationRepositoryError(Exception):
 
 class WXParallelizationRepository(GeoTsRepository):
 
-    def __init__(self, epsg, filename, truth_file=None, padding=15000., cache_data=True, numb_years=None):
+    def __init__(self, epsg: int, filename: str, truth_file: Optional[str] = None, padding: float = 15000.,
+                 cache_data: bool = True, numb_years: Optional[int] = None):
         """
         Reads weather scenario from flattened netcdf-file(s) of geo-located weather data.
 
@@ -208,7 +213,8 @@ class WXParallelizationRepository(GeoTsRepository):
         if truth_file is not None:
             self.truth_repo = WXRepository(epsg, truth_file, padding=padding, flattened=True, allow_year_shift=False, cache_data=False)
 
-    def get_timeseries_ensemble(self, input_source_types, utc_period, geo_location_criteria=None):
+    def get_timeseries_ensemble(self, input_source_types: List[str], utc_period: Any,
+                       geo_location_criteria: Optional[Any] = None) -> List[Dict[str, Any]]:
         """
              Get ensemble of shyft source vectors of time series covering utc_period
              for input_source_types.
@@ -221,12 +227,13 @@ class WXParallelizationRepository(GeoTsRepository):
              -------
              see interfaces.GeoTsRepository
         """
-        scen = self._read_from_file_and_merge(input_source_types, utc_period,
-                                              geo_location_criteria=geo_location_criteria)
+        scen = self._read_from_file_and_merge(input_source_types, geo_location_criteria=geo_location_criteria)
         self.parallelized_years, wx_scen_parallelized = parallelize_geo_timeseries(scen[0], utc_period, self.numb_years)
         return wx_scen_parallelized
 
-    def get_forecast_ensemble(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
+    def get_forecast_ensemble(self, input_source_types: List[str], utc_period: Any, t_c: int,
+                              geo_location_criteria: Optional[Any] = None) -> List[Dict[str, Any]]:
+
         """
         Same as get_timeseries since no time_stamp structure to filename
 
@@ -245,7 +252,8 @@ class WXParallelizationRepository(GeoTsRepository):
         print("Total time for WXParallelizationRepository.get_forecast_ensembles: {}".format(elapsed_time))
         return res
 
-    def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
+    def get_timeseries(self, input_source_types: List[str], utc_period: Any,
+                       geo_location_criteria: Optional[Any] = None) -> Dict[str, Any]:
         """
                      Get ensemble of shyft source vectors of time series covering utc_period
                      for input_source_types.
@@ -258,11 +266,10 @@ class WXParallelizationRepository(GeoTsRepository):
                      -------
                      see interfaces.GeoTsRepository
         """
-        scen = self._read_from_file_and_merge(input_source_types, utc_period,
-                                              geo_location_criteria=geo_location_criteria)
+        scen = self._read_from_file_and_merge(input_source_types, geo_location_criteria=geo_location_criteria)
         return _clip_ensemble_of_geo_timeseries(scen, utc_period, WXParallelizationRepositoryError)[0]
 
-    def _read_from_file_and_merge(self, input_source_types, utc_period, geo_location_criteria=None):
+    def _read_from_file_and_merge(self, input_source_types: List, geo_location_criteria: Optional[Any] = None) -> Any:
         if self.cache is None:
             if self.truth_file is not None:
                 truth_end_time = self.truth_repo.wx_repo.time[0] + self.truth_repo.wx_repo.lead_times_in_sec[-1]
