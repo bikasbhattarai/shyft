@@ -2,7 +2,7 @@
 # See file COPYING for more details **/
 import os
 import time
-from typing import Optional, List, Any, Tuple, Dict
+from typing import Optional, List, Any, Dict
 from shyft import api
 from netCDF4 import Dataset
 from .time_conversion import convert_netcdf_time
