@@ -56,6 +56,7 @@ TEST_SUITE("time_series") {
         p.repeat_timespan=seconds(9);FAST_CHECK_EQ(2,qac::find_last_valid_repeat(a,3,1.01,p));
         p.repeat_timespan=seconds(12);FAST_CHECK_EQ(3,qac::find_last_valid_repeat(a,3,1.01,p));
         p.repeat_timespan=seconds(20);FAST_CHECK_EQ(3,qac::find_last_valid_repeat(a,3,1.01,p));
+        p.repeat_wipe_all=true;FAST_CHECK_EQ(1,qac::find_last_valid_repeat(a,3,1.01,p));
     }
     TEST_CASE("qac_find_left_ok_value") {
         qac_parameter p;
@@ -69,6 +70,8 @@ TEST_SUITE("time_series") {
         p.repeat_timespan=seconds(10);FAST_CHECK_EQ(2,qac::find_left_ok_value(a,4,p));
         p.min_x=-1000.0;
         p.repeat_timespan=seconds(30);FAST_CHECK_EQ(3,qac::find_left_ok_value(a,4,p));        
+        p.repeat_wipe_all=true;FAST_CHECK_EQ(3,qac::find_left_ok_value(a,4,p));
+        p.min_x=0.0;FAST_CHECK_EQ(2,qac::find_left_ok_value(a,4,p));
     }
     TEST_CASE("qac_find_first_ok_value_right") {
         qac_parameter p;

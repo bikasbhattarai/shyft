@@ -1692,7 +1692,7 @@ namespace shyft {
                                 if(!repeated_value(p,x,v[r]) || legal_repeat(p,x)) {
                                     r=i;// push repeat anchor forward
                                     l=i;// last ok value here
-                                } else if( (ta.time(i)-ta.time(r))>p.repeat_timespan) {
+                                } else if( (ta.time(i)-ta.time(r))>p.repeat_timespan || p.repeat_wipe_all) {
                                     v[i] = fx(string::npos,i); //failed by repetition, no left side 
                                 } else {
                                     l=i;// last ok value here
