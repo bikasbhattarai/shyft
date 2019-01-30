@@ -1680,51 +1680,24 @@ namespace shyft {
             void fill_fx_for_bad_values(TA const& ta,vector<double>&v,qac_parameter const&p,FX&&fx) {
                 assert(ta.size()==v.size());
                 size_t l=string::npos;// last ok value
-                double vr{shyft::nan};
-                utctime tr=no_utctime;// repeat-anchor time
                 if(p.repeat_timespan.count()) {
                     size_t r=0;// repeat anchor
-                    size_t f=0;// fill-anchor
                     for(size_t i=0;i<ta.size();++i) {
                         const double x=v[i];
                         if(!qac::is_ok_quality(p,x)) {
                             v[i]=fx((l==string::npos ||r<l)? string::npos : l, i);//r<l means that l is last repeated value
-                            f=r=i+1;//repeat anchor at next value (if any)
-                            tr=no_utctime;
-                            vr=shyft::nan;
+                            r=i+1;//repeat anchor at next value (if any)
                         } else {
                             if( r<i) {
-                                if(!repeated_value(p,x,vr) || legal_repeat(p,x)) {
-                                    f=r=i;// push repeat anchor forward
-                                    if(p.repeat_wipe_all&& i+1 <ta.size()) {//TODO:  if wipe_all, then we do not know! only if next value is not repeat!
-                                        double xn=v[i+1];
-                                        auto tn=ta.time(i+1);
-                                        if(!qac::is_ok_quality(p,xn) ||((tn-ta.time(i))<=p.repeat_timespan) ||(!repeated_value(p,xn,x)||legal_repeat(p,xn))) {
-                                            l=i;// only move left forward if we know that what we move to is not a repeat sequence
-                                            //TODO: This does not work. consider 1 2 3 3 3  4, then l should remain at 2..
-                                        }
-                                    } else
-                                        l=i;// last ok value here: 
-                                    vr=v[r];// keep a possible repeat value
-                                    tr=ta.time(i);//and repeat anchor
-                                } else if( (ta.time(i)-tr)>p.repeat_timespan ) {
-                                    if(p.repeat_wipe_all) { // wipe all starting from r 
-                                        for(size_t j=f;j<=i;++j)
-                                            v[j] = fx(string::npos,j);
-                                        if(l>=r) // we might loose last good value
-                                            l=string::npos;
-                                        r=i;// push repeat anchor forward, avoid filling more than once, but keep tr, vr
-                                        f=r+1;//next fill.                                        
-                                    } else {
-                                        v[i] = fx(string::npos,i); //failed by repetition, no left side 
-                                    }
+                                if(!repeated_value(p,x,v[r]) || legal_repeat(p,x)) {
+                                    r=i;// push repeat anchor forward
+                                    l=i;// last ok value here
+                                } else if( (ta.time(i)-ta.time(r))>p.repeat_timespan || p.repeat_wipe_all) {
+                                    v[i] = fx(string::npos,i); //failed by repetition, no left side 
                                 } else {
                                     l=i;// last ok value here
                                 }
-                            } else {// else r==i, and it's an ok value, 
-                                vr=v[r];// keep a possible repeat value
-                                tr=ta.time(i);//and repeat anchor
-                            }
+                            } 
                         }
                     }
                 } else {

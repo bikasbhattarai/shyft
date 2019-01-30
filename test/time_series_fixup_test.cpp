@@ -134,38 +134,6 @@ TEST_SUITE("time_series") {
             FAST_CHECK_EQ(v[3],doctest::Approx(double(3.0)));// because repeated sequence,not ok to extend
             FAST_CHECK_EQ(v[4],doctest::Approx(double(4.1)));
         }
-        SUBCASE("fill_repeated_and_min_max_wipe_all") {
-            p.min_x=0.0;
-            p.max_x=3.0;
-            size_t n_fills=0;
-            p.repeat_timespan=seconds(10);
-            p.repeat_wipe_all=true;
-            qac::fill_fx_for_bad_values(ta,v,p,[&n_fills](size_t l,size_t i)->double {++n_fills;return double(i)+(l==std::string::npos?0.0:double(l)/10.0);});
-            FAST_CHECK_EQ(n_fills,7);
-            FAST_CHECK_EQ(v[0],doctest::Approx(double(0.0)));
-            FAST_CHECK_EQ(v[1],doctest::Approx(double(1.0)));
-            FAST_CHECK_EQ(v[2],doctest::Approx(double(2.0)));
-            FAST_CHECK_EQ(v[3],doctest::Approx(double(3.0)));// because repeated sequence,not ok to extend
-            FAST_CHECK_EQ(v[4],doctest::Approx(double(4.0)));
-            FAST_CHECK_EQ(v[5],doctest::Approx(double(5.0)));
-            FAST_CHECK_EQ(v[6],doctest::Approx(double(6.0)));
-        }
-        SUBCASE("fill_repeated_and_min_max_wipe_all_2") {
-            p.min_x=0.0;
-            p.max_x=3.0;
-            size_t n_fills=0;
-            p.repeat_timespan=seconds(20);
-            p.repeat_wipe_all=true;
-            qac::fill_fx_for_bad_values(ta,v,p,[&n_fills](size_t l,size_t i)->double {++n_fills;return double(i)+(l==std::string::npos?0.0:double(l)/10.0);});
-            FAST_CHECK_EQ(n_fills,5);
-            FAST_CHECK_EQ(v[0],doctest::Approx(double(0.0)));
-            FAST_CHECK_EQ(v[1],doctest::Approx(double(1.0)));
-            FAST_CHECK_EQ(v[2],doctest::Approx(double(2.0)));
-            FAST_CHECK_EQ(v[3],doctest::Approx(double(3.0)));// because repeated sequence,not ok to extend
-            FAST_CHECK_EQ(v[4],doctest::Approx(double(4.0)));
-            FAST_CHECK_EQ(v[5],doctest::Approx(double(2.0)));
-            FAST_CHECK_EQ(v[6],doctest::Approx(double(2.0)));
-        }
     }
     TEST_CASE("qac_fill_constant_for_missing_values") {
         vector<double> v{1.0,shyft::nan,3.0};
