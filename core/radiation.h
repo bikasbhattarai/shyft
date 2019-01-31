@@ -115,7 +115,8 @@ namespace shyft {
                                    double rsm = 0.0){
 
                     response.sw_radiation = tsw_radiation_step(latitude, t1,t2, slope, aspect, temperature, rhumidity, elevation,rsm);
-                    response.lw_radiation = lw_radiation(temperature, rhumidity);
+//                    response.lw_radiation = lw_radiation(temperature, rhumidity);
+                    response.lw_radiation = lw_radiation_asce_ewri(temperature, rhumidity,fcd_);
                     response.net_radiation = response.sw_radiation+response.lw_radiation;
                     response.ra = ra_radiation();
                     response.rah = ra_radiation_hor();
@@ -621,7 +622,7 @@ namespace shyft {
                  * \param rs,  -- measured or calculated solar radiation
                  * \param rso --calculated clear-sky radiation
                  * response.lw_radiation W/m^2 */
-                double lw_radiation_asce_ewri(double temperature, double rhumidity,double fcd){
+                double lw_radiation_asce_ewri(double temperature, double rhumidity,double fcd=0.3){
                     double sigma_asce = 2.042*pow(10,-10);
                     double netlw  = sigma_asce*fcd*(0.34-0.14*sqrt(actual_vp(temperature,rhumidity)))*pow(temperature+273.15,4);
                     return netlw*MJm2h2Wm2;

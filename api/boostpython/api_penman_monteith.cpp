@@ -17,6 +17,7 @@ namespace expose {
             .def_readwrite("lai",&parameter::lai,"typical value 2.0")
             .def_readwrite("height_ws", &parameter::height_ws,"typical value 2.0")
             .def_readwrite("height_t", &parameter::height_t,"typical value 2.0")
+            .def_readwrite("height_veg", &parameter::height_t,"grass 0.15")
             ;
 
         class_<response>("PenmanMonteithResponse")
@@ -42,6 +43,9 @@ namespace expose {
             .def("reference_evapotranspiration_asce",&PenmanMonteithCalculator::reference_evapotranspiration_asce,(py::arg("self"),py::arg("response"), py::arg("net_radiation"), py::arg("temperature"), py::arg("rhumidity"),  py::arg("elevation"),  py::arg("windspeed")),
                      doc_intro("calculates reference evapotranspiration, updating response")
             )
+            .def("reference_evapotranspiration_st",&PenmanMonteithCalculator::reference_evapotranspiration_st,(py::arg("self"),py::arg("response"), py::arg("net_radiation"), py::arg("temperature"), py::arg("rhumidity"),  py::arg("elevation"),  py::arg("windspeed")),
+                    doc_intro("calculates reference evapotranspiration, updating response")
+                    )
             ;
     }
 }

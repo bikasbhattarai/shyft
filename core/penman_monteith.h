@@ -44,9 +44,9 @@ namespace shyft::core{
                 double lai = 2.0; //leaf area index, defaulted value taken from MORECS-metoff 1981 model for grass
                 double height_ws = 2.0; // [m], height of windspeed measurements
                 double height_t = 2.0; // [m], height of temperature and relative humidity measurements
-                double hveg = 0.15; // vegetation height, [m] (grass from MORECS)
+                double height_veg = 0.15; // vegetation height, [m] (grass from MORECS)
                 double rl = 50.0; // effective stomatal resistance, [s/m] (calculated for grass from MORECS data)
-                parameter(double lai = 2.0,double height_ws = 2.0, double height_t = 2.0, double hveg=0.15, double rl=50.0) : lai(lai), height_ws(height_ws), height_t(height_t), hveg(hveg), rl(rl) {}
+                parameter(double lai = 2.0,double height_ws = 2.0, double height_t = 2.0, double height_veg=0.15, double rl=50.0) : lai(lai), height_ws(height_ws), height_t(height_t), height_veg(height_veg), rl(rl) {}
             };
             struct response {
                 double et_ref = 0.0; // reference evapotranspiration [mm/h]
@@ -77,21 +77,21 @@ namespace shyft::core{
                     double lambda_rho = vaporization_latent_heat(temperature)*rho_w;
 //                     std::cout<<"lambda_rho: "<<lambda_rho<<std::endl;
                     double delta = svp_slope(temperature);
-//                     std::cout<<"delta: "<<delta<<std::endl;
+                     std::cout<<"delta: "<<delta<<std::endl;
                     double avp = actual_vp(temperature, rhumidity);
-//                     std::cout<<"avp: "<<avp<<std::endl;
+                     std::cout<<"avp: "<<avp<<std::endl;
                     double G = soil_heat_flux(net_radiation);
-//                     std::cout<<"G: "<<G<<std::endl;
+                     std::cout<<"G: "<<G<<std::endl;
                     double rho = density_air(pressure, temperature, avp);
 //                     std::cout<<"rho: "<<rho<<std::endl;
                     double ra = resistance_aerodynamic(param.height_ws,windspeed);
 //                     std::cout<<"ra: "<<ra<<std::endl;
                     double sat_vp = svp(temperature);
-//                     std::cout<<"sat_vp: "<<sat_vp<<std::endl;
+                     std::cout<<"sat_vp: "<<sat_vp<<std::endl;
                     double nominator = delta * (net_radiation + soil_heat_flux(net_radiation)) +
                                        ktime*density_air(pressure, temperature, avp)*cp/resistance_aerodynamic(param.height_ws,windspeed, param.height_t)*(svp(temperature)-avp);
 //                     std::cout<<"nominator: "<<nominator<<std::endl;
-                    double denominator = delta + gamma_pm(pressure, temperature)*(1+resistance_surface(param.hveg)/resistance_aerodynamic(param.height_ws,windspeed));
+                    double denominator = delta + gamma_pm(pressure, temperature)*(1+resistance_surface(param.height_veg)/resistance_aerodynamic(param.height_ws,windspeed));
 //                     std::cout<<"denominator: "<<denominator<<std::endl;
                     response.et_ref = nominator/denominator/lambda_rho;
                     return;
@@ -142,7 +142,7 @@ namespace shyft::core{
                                        gamma*Cn*ws_adjustment(param.height_ws,windspeed)*(sat_vp-avp)/(temperature+273);
 //                     std::cout<<"nominator: "<<nominator<<std::endl;
                     double denominator = delta + gamma*(1+Cd*ws_adjustment(param.height_ws,windspeed));
-//                     std::cout<<"denominator: "<<denominator<<std::endl;
+                     std::cout<<"ws at 2m: "<<ws_adjustment(param.height_ws,windspeed)<<std::endl;
                     response.et_ref = std::max(0.01,nominator/denominator);
                     return;
                 };
@@ -171,9 +171,9 @@ namespace shyft::core{
                 const double cp = 1.013*0.001; // specific heat of moist air, [MJ/kg/gradC]
                 const double ktime = 3600; // unit conversion for ET in mm/h
                 //double h = 0.1; // mean height of vegetation --> parameter
-                double d =  0.67 * param.hveg; // zero displacement height, [m]
-                double zom = 0.123*param.hveg; // roughness length governing momentum transfer, [m]
-                double zoh =  0.0123*param.hveg;// roughness height for transfer of heat and vapor, [m]
+                double d =  0.67 * param.height_veg; // zero displacement height, [m]
+                double zom = 0.123*param.height_veg; // roughness length governing momentum transfer, [m]
+                double zoh =  0.0123*param.height_veg;// roughness height for transfer of heat and vapor, [m]
                 double kappa = 0.41; // von Karman's constant
 
 //                const double hveg = 0.15;
@@ -244,7 +244,7 @@ namespace shyft::core{
                     double kg = 0.4;
                     if (net_radiation <= 0.0)
                         kg = 2.0;
-                    return kg*exp(-0.5*lai_a(param.hveg))*net_radiation;
+                    return kg*exp(-0.5*lai_a(param.height_veg))*net_radiation;
                 }
 
                 /**\brief wind speed adjustment for measurement height, eq.B.14*/
